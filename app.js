@@ -3,17 +3,26 @@
    ========================================================== */
 
 /* ------------------------------------------------------------
-   CẤU HÌNH — sửa 2 dòng này sau khi setup Cloudinary
+   CẤU HÌNH
+   ------------------------------------------------------------
+   Cloudinary: sửa trong file  data/config.json  (không cần sửa file này)
+   → { "cloudName": "xxxxxxx", "uploadPreset": "gallery_unsigned" }
+
+   Ngoài ra có thể gán Cloud Name ngay trên web:
+   → window.setCloudName('xxxxxxx')
    ------------------------------------------------------------ */
 const CONFIG = {
-  // Cloudinary Cloud Name (trong Dashboard → Cloudinary account settings)
-  cloudName: 'YOUR_CLOUD_NAME',
+  // Cloudinary Cloud Name (để trống = sẽ đọc từ data/config.json)
+  cloudName: '',
 
   // Upload preset (đặt tên là "gallery_unsigned" hoặc tên bạn chọn)
   uploadPreset: 'gallery_unsigned',
 
   // Link file chứa metadata (ghi chú, ngày, album)
-  dataUrl: 'data/gallery.json'
+  dataUrl: 'data/gallery.json',
+
+  // File chứa cấu hình Cloudinary
+  configUrl: 'data/config.json'
 };
 
 const PAGE_SIZE = 24;   // số ảnh hiện mỗi lần
@@ -41,8 +50,56 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   startHearts();
   bindEvents();
+  await loadConfig();
   await loadPhotos();
 }
+
+/**
+ * Đọc cấu hình Cloudinary từ data/config.json
+ * (hoặc dùng giá trị đã gán sẵn trong CONFIG)
+ */
+async function loadConfig() {
+  // 1. Cloud Name đã lưu trong trình duyệt (ưu tiên cao nhất vì nhanh)
+  try {
+    const saved = localStorage.getItem('CLOUDINARY_NAME');
+    if (saved) CONFIG.cloudName = saved.trim();
+  } catch (err) {
+    // localStorage bị chặn -> bỏ qua
+  }
+
+  // 2. Đọc từ data/config.json
+  try {
+    const res = await fetch(CONFIG.configUrl + '?t=' + Date.now(), {
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const cfg = await res.json();
+
+    // localStorage được ưu tiên, config.json là fallback
+    if (!CONFIG.cloudName && cfg.cloudName)    CONFIG.cloudName = cfg.cloudName.trim();
+    if (cfg.uploadPreset)                      CONFIG.uploadPreset = cfg.uploadPreset.trim();
+
+    console.info('✅ Cloudinary config:', CONFIG.cloudName, '/', CONFIG.uploadPreset);
+  } catch (err) {
+    console.warn('Không đọc được data/config.json — dùng giá trị mặc định trong app.js');
+  }
+}
+
+/**
+ * Gán Cloud Name trực tiếp từ console trình duyệt.
+ * Dùng khi chưa muốn sửa file config.json:
+ *   window.setCloudName('dxyz12345')
+ */
+window.setCloudName = function (name, preset) {
+  CONFIG.cloudName = (name || '').trim();
+  if (preset) CONFIG.uploadPreset = preset.trim();
+
+  console.info('☁️  Cloudinary đã cấu hình:', CONFIG.cloudName, '/', CONFIG.uploadPreset);
+
+  toast('Đã cấu hình Cloudinary: ' + CONFIG.cloudName, 'success');
+  return CONFIG;
+};
 
 function bindEvents() {
   // Nút thêm ảnh
@@ -117,6 +174,38 @@ function bindEvents() {
     }
     if (!$('uploadModal').hidden && e.key === 'Escape') closeUploadModal();
   });
+
+  // Lưu Cloud Name từ ô trong modal
+  $('btnSaveCloud').addEventListener('click', saveCloudNameFromInput);
+  $('cloudNameInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveCloudNameFromInput();
+  });
+}
+
+/**
+ * Lưu Cloud Name đã nhập trong modal.
+ * Ghi vào localStorage để nhớ qua các lần tải trang,
+ * và khuyến nghị lưu vào data/config.json để dùng lâu dài.
+ */
+function saveCloudNameFromInput() {
+  const name = $('cloudNameInput').value.trim();
+
+  if (!name) {
+    toast('Vui lòng nhập Cloud Name', 'error');
+    return;
+  }
+
+  CONFIG.cloudName = name;
+
+  try {
+    localStorage.setItem('CLOUDINARY_NAME', name);
+  } catch (err) {
+    // localStorage bị chặn -> không sao, vẫn dùng được trong phiên này
+  }
+
+  $('cloudSetup').hidden = true;
+
+  toast('Đã lưu Cloud Name: ' + name, 'success');
 }
 
 /* ==========================================================
@@ -425,6 +514,12 @@ function openUploadModal() {
   $('noteInput').value = '';
   $('dateInput').value = new Date().toISOString().slice(0, 10);
   $('albumInput').value = currentAlbum !== 'all' ? currentAlbum : '';
+
+  // Hiện ô cấu hình Cloudinary nếu chưa có
+  $('cloudSetup').hidden = !!CONFIG.cloudName;
+  if (!CONFIG.cloudName) {
+    $('cloudNameInput').value = CONFIG.cloudName || '';
+  }
 }
 
 function closeUploadModal() {
@@ -498,8 +593,12 @@ async function doUpload() {
     return;
   }
 
-  if (CONFIG.cloudName === 'YOUR_CLOUD_NAME') {
-    toast('Chưa cấu hình Cloudinary — mở app.js và điền cloudName + uploadPreset', 'error');
+  if (!CONFIG.cloudName) {
+    toast(
+      'Chưa cấu hình Cloudinary. Mở Console (F12) và chạy: ' +
+      "window.setCloudName('Tên cloud của bạn')",
+      'error'
+    );
     return;
   }
 

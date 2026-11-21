@@ -175,6 +175,24 @@
           <datalist id="albumList"></datalist>
         </label>
 
+        <!-- Cấu hình Cloudinary (chỉ hiện khi chưa cấu hình) -->
+        <div class="cloud-setup" id="cloudSetup" hidden>
+          <div class="cloud-setup-head">
+            <span class="cloud-setup-icon">☁️</span>
+            <div>
+              <strong>Cấu hình Cloudinary (lần đầu)</strong>
+              <p>Lấy Cloud Name tại Cloudinary → Settings → API Keys</p>
+            </div>
+          </div>
+          <div class="cloud-setup-row">
+            <input type="text" id="cloudNameInput" placeholder="Cloud Name (vd: dxyz12345)">
+            <button class="btn btn-soft" id="btnSaveCloud">Lưu</button>
+          </div>
+          <p class="cloud-setup-note">
+            Hoặc sửa file <code>data/config.json</code> trên GitHub (lưu lâu dài hơn).
+          </p>
+        </div>
+
         <div class="preview-row" id="previewRow"></div>
 
         <div class="modal-actions">
