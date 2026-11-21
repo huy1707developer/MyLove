@@ -1,0 +1,21 @@
+# Visual Studio / VS Code cache
+.vs/
+.vscode/
+*.user
+
+# Node
+node_modules/
+
+# Hệ điều hành
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Log
+*.log
+npm-debug.log*
+
+# File tạm
+*.tmp
+*.temp
+~$*

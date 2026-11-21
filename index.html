@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Góc nhỏ xinh của chúng mình - nơi lưu giữ những khoảnh khắc đẹp">
+  <title>Khoảnh Khắc Của Chúng Mình 💕</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💕</text></svg>">
+</head>
+<body>
+
+  <!-- ======== NỀN TRANG TRÍ ======== -->
+  <div class="bg-decor" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="hearts" id="hearts"></div>
+  </div>
+
+  <!-- ======== HEADER ======== -->
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="dot"></span>
+        Khoảnh Khắc Của Chúng Mình
+      </div>
+      <h1 class="hero-title">
+        Nơi lưu giữ những ngày<br>
+        <span class="script">đẹp nhất của hai chúng mình</span>
+      </h1>
+      <p class="hero-sub" id="heroSub">
+        Mỗi tấm ảnh ở đây đều là một câu chuyện.<br>
+        Bấm vào để xem rõ nét nhé!
+      </p>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-num" id="statPhotos">0</span>
+          <span class="stat-label">tấm ảnh</span>
+        </div>
+        <div class="stat-sep">·</div>
+        <div class="stat">
+          <span class="stat-num" id="statAlbums">0</span>
+          <span class="stat-label">album</span>
+        </div>
+        <div class="stat-sep">·</div>
+        <div class="stat">
+          <span class="stat-num" id="statSince">—</span>
+          <span class="stat-label">từ ngày</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======== THANH CÔNG CỤ ======== -->
+  <div class="toolbar" id="toolbar">
+    <div class="toolbar-inner">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" class="search-icon"><path d="M21 21l-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z"/></svg>
+        <input type="search" id="searchInput" placeholder="Tìm theo ghi chú, ngày tháng, album..." autocomplete="off">
+      </div>
+
+      <div class="filters" id="filters"></div>
+
+      <div class="toolbar-actions">
+        <button class="btn btn-primary" id="btnUpload">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Thêm ảnh
+        </button>
+        <button class="btn btn-ghost" id="btnShuffle" title="Xem ngẫu nhiên">
+          <svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== LƯỚI ẢNH ======== -->
+  <main class="container">
+    <div class="gallery" id="gallery"></div>
+
+    <div class="empty" id="emptyState" hidden>
+      <div class="empty-emoji">📷</div>
+      <h3>Chưa có ảnh nào</h3>
+      <p>Hãy thêm những tấm ảnh đầu tiên của hai chúng mình nhé!</p>
+      <button class="btn btn-primary" onclick="document.getElementById('btnUpload').click()">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Thêm ảnh đầu tiên
+      </button>
+    </div>
+
+    <div class="no-result" id="noResult" hidden>
+      <div class="empty-emoji">🔍</div>
+      <h3>Không tìm thấy ảnh nào</h3>
+      <p>Thử tìm với từ khóa khác nhé.</p>
+    </div>
+
+    <!-- Phân trang -->
+    <div class="load-more-wrap" id="loadMoreWrap" hidden>
+      <button class="btn btn-soft" id="btnLoadMore">Xem thêm ảnh</button>
+    </div>
+  </main>
+
+  <!-- ======== LIGHTBOX ======== -->
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-close" id="lbClose" aria-label="Đóng">
+      <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <button class="lb-nav lb-prev" id="lbPrev" aria-label="Ảnh trước">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button class="lb-nav lb-next" id="lbNext" aria-label="Ảnh sau">
+      <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+
+    <figure class="lb-figure">
+      <div class="lb-image-wrap">
+        <img id="lbImage" src="" alt="">
+        <div class="lb-spinner" id="lbSpinner"></div>
+      </div>
+      <figcaption class="lb-caption">
+        <p id="lbNote" class="lb-note"></p>
+        <div class="lb-meta">
+          <span id="lbDate"></span>
+          <span class="dot-sep">•</span>
+          <span id="lbAlbum"></span>
+        </div>
+        <div class="lb-tools">
+          <a id="lbDownload" class="btn btn-soft" download>⬇ Tải ảnh</a>
+          <a id="lbShare" class="btn btn-soft" target="_blank" rel="noopener">🔗 Mở ảnh gốc</a>
+        </div>
+      </figcaption>
+    </figure>
+  </div>
+
+  <!-- ======== MODAL THÊM ẢNH ======== -->
+  <div class="modal" id="uploadModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card">
+      <button class="modal-close" id="modalClose" aria-label="Đóng">
+        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+
+      <h2 class="modal-title">Thêm ảnh mới 💕</h2>
+
+      <!-- Bước 1: chọn file -->
+      <div class="dropzone" id="dropzone">
+        <div class="dz-icon">🌸</div>
+        <p class="dz-title">Kéo thả ảnh vào đây</p>
+        <p class="dz-sub">hoặc</p>
+        <button class="btn btn-soft" id="btnPick">Chọn ảnh từ máy</button>
+        <p class="dz-hint">JPG · PNG · WEBP · GIF — tối đa 10MB mỗi ảnh</p>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      </div>
+
+      <!-- Bước 2: điền thông tin -->
+      <div class="upload-form" id="uploadForm" hidden>
+        <label class="field">
+          <span class="field-label">Ghi chú cho tấm ảnh</span>
+          <textarea id="noteInput" rows="3" placeholder="VD: Ngày đầu tiên đi ăn mì cay cùng nhau 🥟"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Ngày chụp</span>
+          <input type="date" id="dateInput">
+        </label>
+
+        <label class="field">
+          <span class="field-label">Album</span>
+          <input type="text" id="albumInput" list="albumList" placeholder="VD: Kỷ niệm, Du lịch Hội An...">
+          <datalist id="albumList"></datalist>
+        </label>
+
+        <div class="preview-row" id="previewRow"></div>
+
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="btnCancelUpload">Hủy</button>
+          <button class="btn btn-primary" id="btnDoUpload">
+            <span id="uploadBtnText">Tải lên</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== TOAST ======== -->
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <footer class="footer">
+    <p>Được làm bằng tất cả tấm lòng 💗</p>
+    <p class="footer-sub" id="footerSub"></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
