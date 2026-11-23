@@ -187,6 +187,7 @@ deploy Vercel và có config đầy đủ, web sẽ **đọc ảnh thật từ C
 |---|---|
 | 💕 Upload kéo-thả | Chọn nhiều ảnh cùng lúc, có preview trước khi tải |
 | 🗑 Xóa ảnh | Xóa trong lightbox → xóa thật trên Cloudinary (không phải chỉ ẩn) |
+| 🔄 Đồng bộ | Xóa ảnh trong Cloudinary Media Library → web tự cập nhật, không còn ảnh "ma" |
 | 🔍 Lightbox | Click ảnh để xem bản gốc sắc nét, phóng to, tải xuống |
 | ⌨️ Phím tắt | `←` `→` đổi ảnh, `Esc` đóng |
 | 🎲 Ngẫu nhiên | Nút xem ảnh ngẫu nhiên |
@@ -235,10 +236,30 @@ Với web gia đình thì mặc định cũng được rồi. Nếu muốn chỉ
 |---|---|---|
 | "Chưa cấu hình Cloudinary" | `data/config.json` chưa đủ 3 giá trị | Điền `cloudName` + `apiKey` + `apiSecret` |
 | "Failed to fetch" (đỏ) | Chạy local, chưa deploy Vercel → không có `/api/photos` | Deploy lên Vercel, hoặc bấm ⚡ dùng cấu hình có sẵn |
-| Ảnh không hiện sau khi upload | Chưa lưu `localStorage` / chưa deploy | Kiểm tra Console (F12) xem có lỗi gì |
+| "Xóa ảnh lỗi: HTTP 404" | Bản cũ dùng sai endpoint Cloudinary | Đã fix: dùng `POST /image/destroy`. Cập nhật code mới nhất |
+| Ảnh đã xóa ở Cloudinary vẫn hiện trên web | localStorage còn giữ metadata | Bấm 🔄 "Quét lại ảnh từ Cloudinary" → web dọn sạch |
 | Web cứ đòi nhập Cloud Name | `localStorage` có giá trị cũ | Bấm ⚡ dùng cấu hình có sẵn trong `data/config.json` |
 | Upload báo lỗi 401 | Preset không phải `Unsigned` | Vào Cloudinary sửa lại preset |
 | "không đọc được gallery.json" | Thiếu file `data/gallery.json` | Đảm bảo file có trong repo (không bị `.gitignore`) |
+
+---
+
+## 🗑 Xóa ảnh
+
+### Cách 1 — Xóa ngay trên web (khuyến nghị)
+
+1. Bấm vào ảnh để mở lightbox
+2. Bấm **🗑 Xóa ảnh**
+3. Xác nhận → ảnh bị xóa **thật trên Cloudinary** và biến mất khỏi web
+
+### Cách 2 — Xóa trong Cloudinary Media Library
+
+Xóa ảnh trong [Cloudinary Media Library](https://console.cloudinary.com) →
+bấm 🔄 "Quét lại ảnh từ Cloudinary" trên web → ảnh sẽ biến mất.
+
+> Trước đây web **gộp** dữ liệu localStorage với Cloudinary nên ảnh đã xóa vẫn hiện.
+> Đã sửa: **Cloudinary là nguồn sự thật duy nhất**, ảnh nào không còn trên
+> Cloudinary sẽ bị dọn khỏi localStorage và không hiện trên web nữa.
 
 ---
 
