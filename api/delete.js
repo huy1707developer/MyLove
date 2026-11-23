@@ -4,13 +4,11 @@
  * POST /api/delete
  * Body: { "public_id": "lovegallery/abc123" }
  *
- * Cloudinary Admin API không hỗ trợ CORS nên phải gọi qua server-side.
- * Endpoint chuẩn của Cloudinary để xóa nhiều ảnh:
- *   DELETE /v1_1/{cloud}/resources/image?public_ids[]=id1&public_ids[]=id2
+ * ⚠️ Endpoint ĐÚNG của Cloudinary để xóa 1 ảnh là:
+ *      POST /v1_1/{cloud}/image/destroy?public_id=...
+ *    (Admin API `DELETE /resources/image` KHÔNG tồn tại → trả 404)
  *
- * Nếu ảnh nằm trong folder (public_id có dấu /) thì dùng:
- *   DELETE /v1_1/{cloud}/resources/image/{type}/{public_id}
- * hoặc bọc public_id vào query array.
+ * Cloudinary Admin API không hỗ trợ CORS nên phải gọi qua server-side.
  */
 
 const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'dppt775qk';
@@ -53,7 +51,7 @@ module.exports = async function handler(req, res) {
   }
 
   // Chỉ cho xóa trong phạm vi folder lovegallery (an toàn)
-  if (!publicId.startsWith('lovegallery/') && !publicId.startsWith('lovegallery')) {
+  if (!publicId.startsWith('lovegallery')) {
     res.status(403).json({
       error: { message: 'Chỉ được xóa ảnh trong folder "lovegallery"' }
     });
@@ -63,22 +61,42 @@ module.exports = async function handler(req, res) {
   try {
     const auth = 'Basic ' + Buffer.from(API_KEY + ':' + API_SECRET).toString('base64');
 
-    // Cloudinary Admin API: DELETE /resources/image?public_ids[]=...
+    // Endpoint chuẩn Cloudinary để xóa 1 asset
     const url =
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/image` +
-      `?public_ids%5B%5D=${encodeURIComponent(publicId)}&invalidate=true`;
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/destroy` +
+      `?public_id=${encodeURIComponent(publicId)}&invalidate=true`;
 
     const cldRes = await fetch(url, {
-      method: 'DELETE',
+      method: 'POST',
       headers: { Authorization: auth }
     });
 
     const body = await cldRes.text();
 
-    res.status(cldRes.status);
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.end(body);
+    let data = {};
+    try { data = JSON.parse(body); } catch (e) { /* giữ nguyên body */ }
+
+    // Cloudinary trả { "result": "ok" } khi xóa thành công,
+    // { "result": "not found" } khi ảnh đã bị xóa trước đó.
+    const result = data.result;
+
+    if (!cldRes.ok) {
+      res.status(cldRes.status).json({
+        error: { message: data.error?.message || ('HTTP ' + cldRes.status) }
+      });
+      return;
+    }
+
+    if (result === 'not found') {
+      // Ảnh đã bị xóa trước đó → coi như thành công (web vẫn cần bỏ nó khỏi danh sách)
+      res.status(200).json({
+        result: 'not found',
+        message: 'Ảnh đã không còn trên Cloudinary (coi như đã xóa)'
+      });
+      return;
+    }
+
+    res.status(200).json({ result: result || 'ok', public_id: publicId });
   } catch (err) {
     res.status(500).json({
       error: { message: 'Lỗi khi xóa trên Cloudinary: ' + err.message }

@@ -1150,15 +1150,10 @@ async function deleteCurrentPhoto() {
         throw new Error(msg);
       }
 
-      // Cloudinary trả { deleted: { "public_id": "ok" } } hoặc { deleted: [...] }
-      const deleted = data.deleted;
-      const failed = data.not_found || [];
-
-      if (deleted && typeof deleted === 'object' && !Array.isArray(deleted)) {
-        const status = deleted[p.id];
-        if (status === 'not found') {
-          throw new Error('Ảnh không còn trên Cloudinary (có thể đã xóa trước đó)');
-        }
+      // Cloudinary trả { result: "ok" } hoặc { result: "not found" }
+      // "not found" = ảnh đã bị xóa trước đó → vẫn coi là thành công
+      if (data.result === 'not found') {
+        console.info('ℹ️ Ảnh đã không còn trên Cloudinary:', p.id);
       }
     }
 
