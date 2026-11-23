@@ -277,6 +277,7 @@ function bindEvents() {
   $('lbClose').addEventListener('click', closeLightbox);
   $('lbPrev').addEventListener('click', () => navigateLightbox(-1));
   $('lbNext').addEventListener('click', () => navigateLightbox(1));
+  $('lbDelete').addEventListener('click', deleteCurrentPhoto);
   $('lightbox').addEventListener('click', (e) => {
     if (e.target === $('lightbox')) closeLightbox();
   });
@@ -1050,6 +1051,134 @@ function closeLightbox() {
   $('lightbox').hidden = true;
   document.body.style.overflow = '';
   currentIndex = -1;
+}
+
+/* ==========================================================
+   XÓA ẢNH
+   ========================================================== */
+
+/**
+ * Xóa ảnh đang xem trong lightbox.
+ *
+ * Quy trình:
+ *   1. Hỏi xác nhận người dùng
+ *   2. Gọi /api/delete để xóa thật trên Cloudinary (nếu ảnh nằm trên Cloudinary)
+ *   3. Xóa khỏi mảng photos + localStorage
+ *   4. Render lại gallery
+ */
+async function deleteCurrentPhoto() {
+  if (currentIndex < 0 || !filtered[currentIndex]) return;
+
+  const p = filtered[currentIndex];
+  const label = p.note ? `"${p.note}"` : (p.filename || 'ảnh này');
+
+  const ok = await confirmDialog(
+    'Xóa ảnh?',
+    `Bạn có chắc muốn xóa ${label}? Ảnh sẽ bị xóa vĩnh viễn trên Cloudinary và không thể khôi phục.`,
+    'Xóa'
+  );
+
+  if (!ok) return;
+
+  const btn = $('lbDelete');
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang xóa...';
+
+  const isCloudinary = p.url && p.url.includes('res.cloudinary.com');
+
+  try {
+    if (isCloudinary && p.id) {
+      const res = await fetch('/api/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ public_id: p.id })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const msg = (data && data.error && data.error.message) || ('HTTP ' + res.status);
+        throw new Error(msg);
+      }
+
+      // Cloudinary trả { deleted: { "public_id": "ok" } } hoặc { deleted: [...] }
+      const deleted = data.deleted;
+      const failed = data.not_found || [];
+
+      if (deleted && typeof deleted === 'object' && !Array.isArray(deleted)) {
+        const status = deleted[p.id];
+        if (status === 'not found') {
+          throw new Error('Ảnh không còn trên Cloudinary (có thể đã xóa trước đó)');
+        }
+      }
+    }
+
+    // Xóa khỏi bộ nhớ + localStorage
+    photos = photos.filter(x => x.id !== p.id);
+    savePhotosToLocal();
+
+    // Đóng lightbox, rồi render lại (applyFilters lọc lại filtered từ photos)
+    closeLightbox();
+    applyFilters();
+    renderStats();
+    renderAlbumList();
+
+    toast('Đã xóa ảnh 🗑', 'success');
+  } catch (err) {
+    console.error('❌ Xóa ảnh lỗi:', err);
+    toast('Không xóa được: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+/**
+ * Hộp thoại xác nhận (thay thế window.confirm cho đẹp hơn).
+ * Trả về Promise<boolean>.
+ */
+function confirmDialog(title, message, okText) {
+  return new Promise(resolve => {
+    // Tạo modal nếu chưa có
+    let overlay = $('confirmOverlay');
+
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'confirmOverlay';
+      overlay.className = 'confirm-overlay';
+      overlay.innerHTML = `
+        <div class="confirm-box" role="dialog" aria-modal="true">
+          <h3 class="confirm-title"></h3>
+          <p class="confirm-msg"></p>
+          <div class="confirm-actions">
+            <button class="btn btn-soft" data-act="cancel">Hủy</button>
+            <button class="btn btn-danger btn-danger-solid" data-act="ok"></button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener('click', (e) => {
+        const act = e.target.getAttribute && e.target.getAttribute('data-act');
+        if (act === 'ok') { close(true); }
+        else if (act === 'cancel' || e.target === overlay) { close(false); }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !overlay.hidden) { close(false); }
+      });
+    }
+
+    function close(result) {
+      overlay.hidden = true;
+      resolve(result);
+    }
+
+    overlay.querySelector('.confirm-title').textContent = title;
+    overlay.querySelector('.confirm-msg').textContent = message;
+    overlay.querySelector('[data-act="ok"]').textContent = okText || 'Xác nhận';
+    overlay.hidden = false;
+  });
 }
 
 /* ==========================================================

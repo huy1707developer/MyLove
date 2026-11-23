@@ -626,6 +626,10 @@ button, input, textarea {
 }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.88) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
 
 .lb-figure {
   margin: 0;
@@ -709,6 +713,82 @@ button, input, textarea {
 }
 
 .lb-tools .btn-soft:hover { background: rgba(255, 255, 255, .2); }
+
+/* Nút xóa ảnh trong lightbox */
+.btn-danger {
+  background: rgba(244, 63, 94, .18);
+  color: #ffd9df;
+  border: 1.5px solid rgba(244, 63, 94, .5);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(244, 63, 94, .35);
+  border-color: rgba(244, 63, 94, .8);
+  transform: translateY(-1px);
+}
+
+.btn-danger:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.btn-danger.btn-danger-solid {
+  background: #f43f5e;
+  color: #fff;
+  border-color: #f43f5e;
+}
+
+.btn-danger.btn-danger-solid:hover:not(:disabled) {
+  background: #e11d48;
+  border-color: #e11d48;
+}
+
+/* ======== Hộp thoại xác nhận xóa ======== */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(30, 20, 45, .55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn .18s ease;
+}
+
+.confirm-overlay[hidden] { display: none; }
+
+.confirm-box {
+  width: 100%;
+  max-width: 400px;
+  background: var(--white);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .28);
+  animation: popIn .22s cubic-bezier(.34, 1.56, .64, 1);
+  text-align: center;
+}
+
+.confirm-title {
+  margin: 0 0 10px;
+  font-family: 'Dancing Script', cursive;
+  font-size: 28px;
+  color: var(--pink-600);
+}
+
+.confirm-msg {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
 
 .lb-close, .lb-nav {
   position: absolute;
