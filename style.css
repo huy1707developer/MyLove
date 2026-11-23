@@ -517,6 +517,38 @@ button, input, textarea {
 
 .card:hover .card-img { transform: scale(1.08); }
 
+/* Ảnh đã bị xóa trên Cloudinary (URL 404) */
+.card-img-missing { display: none; }
+
+.card-missing {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--pink-50),
+    var(--pink-50) 12px,
+    var(--pink-100) 12px,
+    var(--pink-100) 24px
+  );
+  color: var(--pink-600);
+  text-align: center;
+  padding: 12px;
+}
+
+.card-missing span { font-size: 34px; opacity: .6; }
+.card-missing small { font-size: 12px; font-weight: 700; letter-spacing: .5px; }
+.card-missing-note {
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: var(--ink-mute) !important;
+  opacity: .8;
+}
+
 .card-overlay {
   position: absolute;
   inset: 0;

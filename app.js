@@ -212,26 +212,24 @@ function bindEvents() {
   $('btnRefresh').addEventListener('click', async () => {
     const btn = $('btnRefresh');
     btn.disabled = true;
+    btn.title = 'Đang quét...';
 
-    const list = await loadPhotosFromCloudinary();
+    try {
+      // Dùng loadPhotos() để Cloudinary là nguồn quyết định:
+      // ảnh đã xóa trong Media Library sẽ biến mất khỏi web.
+      await loadPhotos();
 
-    if (list && list.length) {
-      photos = mergePhotos(list, photos);
-      savePhotosToLocal();
-      applyFilters();
-      renderStats();
-      renderAlbumList();
-      renderCloudStatus();
-      toast('Đã quét: ' + photos.length + ' ảnh ☁️', 'success');
-    } else {
-      renderCloudStatus();
-      toast(
-        window.__cldError || 'Cloudinary không trả về ảnh nào (có thể do gói Free)',
-        'error'
-      );
+      if (window.__cldError) {
+        toast('Không đọc được Cloudinary: ' + window.__cldError, 'error');
+      } else {
+        toast('Đã quét: ' + photos.length + ' ảnh ☁️', 'success');
+      }
+    } catch (err) {
+      toast('Lỗi khi quét: ' + err.message, 'error');
     }
 
     btn.disabled = false;
+    btn.title = 'Quét lại ảnh từ Cloudinary';
   });
 
   // Export / Import danh sách ảnh
@@ -434,32 +432,53 @@ function startHearts() {
    ========================================================== */
 
 /**
- * Kiểm kê ảnh — 3 tầng nguồn dữ liệu:
+ * Kiểm kê ảnh — thứ tự ưu tiên:
  *
- *   1. localStorage   → ảnh đã upload trên CHÍNH máy này (tức thì, luôn đúng)
- *   2. Cloudinary API → đọc ảnh đã upload (cần API Key/Secret có quyền đọc)
- *   3. gallery.json   → dữ liệu mẫu / dữ liệu đã export từ máy khác
+ *   1. Cloudinary API → nguồn CHÍNH THÁC. Đây là "sự thật" về ảnh nào còn tồn tại.
+ *      Ảnh đã bị xóa trong Cloudinary Media Library sẽ BIẾN MẤT khỏi web.
+ *   2. localStorage   → chỉ dùng khi KHÔNG đọc được Cloudinary (chạy local,
+ *                      hoặc /api/photos lỗi). Giữ để không mất ảnh vừa upload.
+ *   3. gallery.json   → dữ liệu fallback cuối cùng.
  *
- * Ghi chú: Cloudinary Free plan / môi trường Test có thể không cho đọc
- * resources qua Admin API. Vì vậy localStorage luôn được ưu tiên cao nhất,
- * và có thêm chức năng Export/Import để đồng bộ giữa các thiết bị.
+ * ⚠️ Trước đây hàm này GỘP localStorage với Cloudinary (mergePhotos) nên ảnh
+ * đã xóa trên Cloudinary vẫn hiện trên web. Đã đảo lại: Cloudinary là thứ
+ * quyết định, localStorage chỉ là bộ đệm tạm.
  */
 async function loadPhotos() {
   const sources = [];
 
-  // Tầng 1: localStorage (ảnh đã upload trên máy này)
-  const local = loadPhotosFromLocal();
-  if (local && local.length) {
-    photos = local;
-    sources.push('localStorage (' + local.length + ')');
+  // Tầng 1: Cloudinary — nguồn chính thức
+  const fromCloud = await loadPhotosFromCloudinary();
+
+  // `cloudOk` = đọc Cloudinary THÀNH CÔNG (kể cả khi không còn ảnh nào).
+  // Chỉ khi đọc LỖI mới fallback sang localStorage.
+  const cloudOk = fromCloud !== null && !window.__cldError;
+
+  if (cloudOk) {
+    photos = fromCloud;
+    sources.push('Cloudinary (' + fromCloud.length + ')');
+
+    // Dọn ảnh đã bị xóa trên Cloudinary ra khỏi localStorage
+    const cloudIds = new Set(fromCloud.map(p => p.id));
+    const local = loadPhotosFromLocal() || [];
+    const stale = local.filter(p => !cloudIds.has(p.id));
+
+    if (stale.length) {
+      const kept = local.filter(p => cloudIds.has(p.id));
+      try {
+        localStorage.setItem('LOVE_GALLERY_PHOTOS', JSON.stringify(kept));
+        console.info('🧹 Đã dọn', stale.length, 'ảnh không còn trên Cloudinary khỏi localStorage');
+      } catch (err) { /* bỏ qua */ }
+    }
   }
 
-  // Tầng 2: Cloudinary Admin API
-  const fromCloud = await loadPhotosFromCloudinary();
-  if (fromCloud && fromCloud.length) {
-    // Gộp: ảnh từ cloud + ảnh chỉ có ở local (không trùng public_id)
-    photos = mergePhotos(fromCloud, photos);
-    sources.push('Cloudinary (' + fromCloud.length + ')');
+  // Tầng 2: localStorage — chỉ khi Cloudinary KHÔNG đọc được
+  if (!cloudOk) {
+    const local = loadPhotosFromLocal();
+    if (local && local.length) {
+      photos = local;
+      sources.push('localStorage (' + local.length + ')');
+    }
   }
 
   // Tầng 3: gallery.json (chỉ khi chưa có gì)
@@ -667,13 +686,13 @@ async function loadPhotosFromCloudinary() {
 
   const resources = data.resources || [];
 
+  // Cloud rỗng KHÔNG phải lỗi — nghĩa là bạn đã xóa hết ảnh.
+  // Chỉ báo lỗi khi thực sự không đọc được.
+  window.__cldError = null;
+
   if (!resources.length) {
-    console.warn(
-      '⚠️ Cloud "' + CONFIG.cloudName + '" không có ảnh nào (total=' + data.total_count + ').'
-    );
-    window.__cldError = 'Cloud "' + CONFIG.cloudName + '" không có ảnh nào. Có thể Cloud Name sai.';
+    console.info('☁️  Cloud "' + CONFIG.cloudName + '" hiện không có ảnh nào (đã xóa hết?)');
   } else {
-    window.__cldError = null;
     console.info('☁️  Cloudinary trả về', resources.length, 'ảnh');
   }
 
@@ -889,6 +908,29 @@ function renderAlbumList() {
    RENDER LƯỚI ẢNH
    ========================================================== */
 
+/**
+ * Đánh dấu ảnh đã bị xóa (URL trả 404) — thay bằng placeholder "đã xóa".
+ * Ảnh này có thể đã bị xóa trong Cloudinary Media Library.
+ */
+function markMissing(img, p) {
+  img.onerror = null;
+  img.removeAttribute('src');
+  img.classList.add('card-img-missing');
+
+  const ph = document.createElement('div');
+  ph.className = 'card-missing';
+  ph.innerHTML = '<span>🗑</span><small>Đã xóa</small>';
+
+  if (p && p.note) {
+    const note = document.createElement('small');
+    note.className = 'card-missing-note';
+    note.textContent = p.note;
+    ph.appendChild(note);
+  }
+
+  if (img.parentNode) img.parentNode.appendChild(ph);
+}
+
 function renderGallery() {
   const gallery = $('gallery');
   const empty = $('emptyState');
@@ -934,8 +976,14 @@ function renderGallery() {
     img.src = cloudinaryUrl(p.url, 'w_600,q_auto,f_auto');
     img.alt = p.note || 'Ảnh khoảnh khắc';
     img.onerror = function () {
-      this.onerror = null;
-      this.src = p.url;   // fallback về ảnh gốc
+      // Thử ảnh gốc (không có transformation)
+      if (this.src !== p.url) {
+        this.onerror = null;
+        this.src = p.url;
+        this.onerror = function () { markMissing(this, p); };
+      } else {
+        markMissing(this, p);
+      }
     };
 
     card.appendChild(img);
