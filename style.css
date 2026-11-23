@@ -404,6 +404,70 @@ button, input, textarea {
 
 .btn-ghost:hover { background: var(--pink-50); }
 
+/* ---------- Cảnh báo Cloudinary ---------- */
+
+.cloud-status {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  background: #fff7ed;
+  border-bottom: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.cloud-status code {
+  background: #ffedd5;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.cloud-status b { color: #7c2d12; }
+
+/* ---------- Thanh đồng bộ ảnh ---------- */
+
+.sync-bar {
+  background: linear-gradient(135deg, #fdf4ff, #f0f9ff);
+  border-bottom: 1px solid var(--purple-200);
+}
+
+.sync-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sync-text {
+  flex: 1 1 260px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+.sync-text b {
+  color: var(--pink-600);
+  font-size: 15px;
+}
+
+.sync-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 8px 14px;
+  font-size: 12.5px;
+}
+
+.btn-sm svg { width: 15px; height: 15px; }
+
 /* ==========================================================
    GALLERY GRID
    ========================================================== */
@@ -918,6 +982,20 @@ button, input, textarea {
   border-radius: 5px;
   font-size: 11px;
   color: var(--pink-600);
+}
+
+#btnUseDefaultCloud {
+  margin-top: 10px;
+  width: 100%;
+  border-style: dashed;
+  border-color: var(--pink-300);
+  color: var(--pink-600);
+  font-weight: 700;
+}
+
+#btnUseDefaultCloud:hover {
+  background: var(--pink-100);
+  border-style: solid;
 }
 
 .preview-item {

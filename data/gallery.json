@@ -1,56 +1,11 @@
 [
   {
-    "id": "demo-1",
-    "url": "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=1600&q=80",
-    "filename": "demo-1.jpg",
-    "note": "Buổi hẹn đầu tiên của chúng mình ❤️",
-    "date": "2025-03-14",
-    "album": "Kỷ niệm",
-    "uploadedAt": "2025-03-14T10:00:00.000Z"
-  },
-  {
-    "id": "demo-2",
-    "url": "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=1600&q=80",
-    "filename": "demo-2.jpg",
-    "note": "Đi ăn mì cay cùng nhau, cay nổ mắt nhưng cười hoài 😆",
-    "date": "2025-04-02",
-    "album": "Kỷ niệm",
-    "uploadedAt": "2025-04-02T12:30:00.000Z"
-  },
-  {
-    "id": "demo-3",
-    "url": "https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=1600&q=80",
-    "filename": "demo-3.jpg",
-    "note": "Hoàng hôn ở Đà Lạt - trời tím lắm",
-    "date": "2025-05-20",
-    "album": "Du lịch",
-    "uploadedAt": "2025-05-20T09:15:00.000Z"
-  },
-  {
-    "id": "demo-4",
-    "url": "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80",
-    "filename": "demo-4.jpg",
-    "note": "Nắng đẹp quá trời",
-    "date": "2025-06-08",
-    "album": "Du lịch",
-    "uploadedAt": "2025-06-08T08:00:00.000Z"
-  },
-  {
-    "id": "demo-5",
-    "url": "https://images.unsplash.com/photo-1511988617509-a57c8a288659?w=1600&q=80",
-    "filename": "demo-5.jpg",
-    "note": "Một ngày bình yên bên nhau",
-    "date": "2025-07-11",
-    "album": "Mỗi ngày bình yên",
-    "uploadedAt": "2025-07-11T14:00:00.000Z"
-  },
-  {
-    "id": "demo-6",
-    "url": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=1600&q=80",
-    "filename": "demo-6.jpg",
-    "note": "Hoa đẹp quá, nhớ tặng em 🌷",
-    "date": "2025-07-12",
-    "album": "Mỗi ngày bình yên",
-    "uploadedAt": "2025-07-12T10:20:00.000Z"
+    "id": "cbratejfmnmcqaw12d8p",
+    "url": "https://res.cloudinary.com/dppt775qk/image/upload/q_auto,f_auto/v1795399474/cbratejfmnmcqaw12d8p.jpg",
+    "filename": "20260701_200600.jpg",
+    "note": "Tốt 😍",
+    "date": "2026-11-23",
+    "album": "",
+    "uploadedAt": "2026-11-23T02:04:34.000Z"
   }
 ]

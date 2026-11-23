@@ -72,9 +72,27 @@
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Thêm ảnh
         </button>
+        <button class="btn btn-ghost" id="btnRefresh" title="Quét lại ảnh từ Cloudinary">
+          <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
         <button class="btn btn-ghost" id="btnShuffle" title="Xem ngẫu nhiên">
           <svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== THANH ĐỒNG BỘ ẢNH ======== -->
+  <div class="sync-bar" id="syncBar" hidden>
+    <div class="sync-inner">
+      <span class="sync-text">
+        📦 Đang lưu <b id="syncCount">0</b> ảnh trên máy này.
+        Muốn xem trên máy khác? Xuất ra file rồi import vào.
+      </span>
+      <div class="sync-actions">
+        <button class="btn btn-soft btn-sm" id="btnExport">⬇ Xuất ảnh (JSON)</button>
+        <button class="btn btn-soft btn-sm" id="btnImport">⬆ Nhập ảnh</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
       </div>
     </div>
   </div>
@@ -180,7 +198,7 @@
           <div class="cloud-setup-head">
             <span class="cloud-setup-icon">☁️</span>
             <div>
-              <strong>Cấu hình Cloudinary (lần đầu)</strong>
+              <strong>Cấu hình Cloudinary</strong>
               <p>Lấy Cloud Name tại Cloudinary → Settings → API Keys</p>
             </div>
           </div>
@@ -200,6 +218,10 @@
             sau khi tải lại trang — nếu không có, ảnh đã upload sẽ không hiện lại.<br>
             Lấy tất cả 3 giá trị tại <b>Cloudinary → Settings → API Keys</b>.
           </p>
+
+          <button class="btn btn-soft btn-block" id="btnUseDefaultCloud" type="button">
+            ⚡ Dùng cấu hình có sẵn trong data/config.json
+          </button>
         </div>
 
         <div class="preview-row" id="previewRow"></div>
@@ -222,6 +244,6 @@
     <p class="footer-sub" id="footerSub"></p>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

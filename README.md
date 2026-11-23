@@ -11,11 +11,34 @@ love-gallery/
 ├── index.html          # Giao diện
 ├── style.css           # Giao diện (màu hồng, dễ thương)
 ├── app.js              # Logic: upload, lưới ảnh, lightbox
+├── api/
+│   └── photos.js       # ⚠️ Serverless Function của Vercel: proxy tới Cloudinary
 ├── data/
-│   └── gallery.json    # ⚠️ ĐÂY LÀ NƠI LƯU GHI CHÚ / NGÀY / ALBUM
+│   ├── config.json     # Cấu hình Cloudinary (Cloud Name, API Key/Secret)
+│   └── gallery.json    # Ảnh fallback khi chưa cấu hình
 ├── vercel.json         # Cấu hình deploy
 └── README.md
 ```
+
+---
+
+## ⚡ Vì sao cần `api/photos.js`?
+
+**Cloudinary Admin API không trả header CORS** → trình duyệt chặn → web không
+đọc được danh sách ảnh sau khi reload (lỗi `Failed to fetch`).
+
+`api/photos.js` là **Vercel Serverless Function** đóng vai trò proxy:
+
+```
+Trình duyệt  →  /api/photos  (Vercel, server-side)  →  Cloudinary Admin API
+                  ↑ có CORS                              ↑ không cần CORS
+```
+
+Nó cũng giúp **giấu API Secret** khỏi mã nguồn client.
+
+> ⚠️ Chỉ hoạt động **sau khi deploy lên Vercel**. Khi chạy local bằng
+> `python -m http.server` thì `/api/photos` không có → web fallback sang
+> `localStorage` + `data/gallery.json` (vẫn xem được ảnh đã upload trên máy đó).
 
 ---
 
@@ -104,40 +127,56 @@ Lấy cả 3 tại: **Cloudinary → Settings → API Keys**
 
 ### Cách nhập
 
-**Cách A — Nhập trên web (nhanh nhất)**
-1. Bấm **"Thêm ảnh"**
-2. Khối **☁️ Cấu hình Cloudinary** hiện ra
-3. Dán Cloud Name + API Key + API Secret → bấm **Lưu**
-4. Lưu vào trình duyệt (localStorage), dùng lâu dài trên máy này
-
-**Cách B — Sửa `data/config.json` (dùng chung mọi thiết bị)**
+**Cách A — Sửa `data/config.json` (dùng chung mọi thiết bị, khuyến nghị)**
 ```json
 {
-  "cloudName": "dxyz12345",
+  "cloudName": "dppt775qk",
   "uploadPreset": "gallery_unsigned",
   "apiKey": "123456789012345",
   "apiSecret": "abc123..."
 }
 ```
-→ Commit lên GitHub → Vercel deploy lại → xong.
+→ Commit lên GitHub → Vercel deploy lại → xong. **Không còn phải nhập tay.**
+
+**Cách B — Nhập trên web (nhanh nhất, chỉ máy này)**
+1. Bấm **"Thêm ảnh"**
+2. Khối **☁️ Cấu hình Cloudinary** hiện ra
+3. Dán Cloud Name + API Key + API Secret → bấm **Lưu**
+4. Hoặc bấm **⚡ Dùng cấu hình có sẵn trong data/config.json**
 
 **Cách C — Console trình duyệt**
 ```javascript
-window.setCloudName('dxyz12345')
+window.setCloudName('dppt775qk')
 window.setCloudKeys('123456789012345', 'abc123...')
 ```
 
+### ⚠️ Thứ tự ưu tiên cấu hình
+
+1. `data/config.json` ← **nguồn chính**
+2. `localStorage` ← chỉ dùng khi `config.json` thiếu/lỗi
+
+> Trước đây `localStorage` được đọc trước nên giá trị cũ (sai) đè lên
+> `config.json` → web cứ đòi nhập lại Cloud Name. Đã đảo lại rồi.
+
 ### ⚠️ Bảo mật
 
-`apiSecret` trong `data/config.json` là **public** (ai có link cũng đọc được repo). Đây là web gia đình nên chấp nhận được, nhưng nếu bạn lo:
+`apiSecret` trong `data/config.json` là **public** (ai có link cũng đọc được repo). Đây là web gia đình nên chấp nhận được.
 
-- **Cách an toàn**: dùng localStorage (Cách A) → secret không nằm trong repo
-- **Cách chặn hơn**: tạo Cloudinary API key riêng chỉ cho read (`Manage API Keys` → tạo key giới hạn quyền)
-- Hoặc dùng **Vercel Serverless Function** để giấu secret khỏi client (mình làm thêm nếu bạn muốn)
+Muốn giấu secret hoàn toàn thì set biến môi trường trên Vercel:
+
+```
+CLOUDINARY_CLOUD_NAME
+CLOUDINARY_API_KEY
+CLOUDINARY_API_SECRET
+```
+
+→ `api/photos.js` sẽ tự dùng các biến này, và có thể xoá `apiKey`/`apiSecret`
+khỏi `data/config.json`.
 
 ### Dữ liệu mẫu `data/gallery.json`
 
-File này chỉ chứa ảnh mẫu ban đầu. Khi web đã cấu hình API Key, nó sẽ **đọc ảnh thật từ Cloudinary** và bỏ qua file này.
+File này chỉ làm **fallback** khi chưa cấu hình API Key hoặc chạy local. Khi
+deploy Vercel và có config đầy đủ, web sẽ **đọc ảnh thật từ Cloudinary**.
 
 ---
 
@@ -192,10 +231,12 @@ Với web gia đình thì mặc định cũng được rồi. Nếu muốn chỉ
 
 | Lỗi | Nguyên nhân | Cách sửa |
 |---|---|---|
-| "Chưa cấu hình Cloudinary" | Chưa sửa `CONFIG` trong `app.js` | Điền `cloudName` + `uploadPreset` |
-| "không đọc được gallery.json" | Thiếu file `data/gallery.json` | Đảm bảo file có trong repo (không bị `.gitignore`) |
+| "Chưa cấu hình Cloudinary" | `data/config.json` chưa đủ 3 giá trị | Điền `cloudName` + `apiKey` + `apiSecret` |
+| "Failed to fetch" (đỏ) | Chạy local, chưa deploy Vercel → không có `/api/photos` | Deploy lên Vercel, hoặc bấm ⚡ dùng cấu hình có sẵn |
+| Ảnh không hiện sau khi upload | Chưa lưu `localStorage` / chưa deploy | Kiểm tra Console (F12) xem có lỗi gì |
+| Web cứ đòi nhập Cloud Name | `localStorage` có giá trị cũ | Bấm ⚡ dùng cấu hình có sẵn trong `data/config.json` |
 | Upload báo lỗi 401 | Preset không phải `Unsigned` | Vào Cloudinary sửa lại preset |
-| Ảnh không hiện sau khi upload | Metadata chưa lưu vào `gallery.json` | Làm theo mục "Cách lưu ghi chú" ở trên |
+| "không đọc được gallery.json" | Thiếu file `data/gallery.json` | Đảm bảo file có trong repo (không bị `.gitignore`) |
 
 ---
 
