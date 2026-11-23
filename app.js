@@ -5,11 +5,21 @@
 /* ------------------------------------------------------------
    CẤU HÌNH
    ------------------------------------------------------------
-   Cloudinary: sửa trong file  data/config.json  (không cần sửa file này)
-   → { "cloudName": "xxxxxxx", "uploadPreset": "gallery_unsigned" }
+   Cloudinary: sửa trong file  data/config.json
+   → {
+   →   "cloudName": "xxxxxxx",
+   →   "uploadPreset": "gallery_unsigned",
+   →   "apiKey": "123456789012345",
+   →   "apiSecret": "abc..."
+   → }
 
-   Ngoài ra có thể gán Cloud Name ngay trên web:
+   apiKey / apiSecret lấy tại Cloudinary → Settings → API Keys.
+   Chúng giúp web đọc lại danh sách ảnh sau khi reload
+   (Admin API). Xem file .gitignore nếu muốn giữ bí mật.
+
+   Ngoài ra có thể gán từ console:
    → window.setCloudName('xxxxxxx')
+   → window.setCloudKeys('key', 'secret')
    ------------------------------------------------------------ */
 const CONFIG = {
   // Cloudinary Cloud Name (để trống = sẽ đọc từ data/config.json)
@@ -17,6 +27,10 @@ const CONFIG = {
 
   // Upload preset (đặt tên là "gallery_unsigned" hoặc tên bạn chọn)
   uploadPreset: 'gallery_unsigned',
+
+  // API Key + Secret để đọc danh sách ảnh từ Cloudinary (Admin API)
+  apiKey: '',
+  apiSecret: '',
 
   // Link file chứa metadata (ghi chú, ngày, album)
   dataUrl: 'data/gallery.json',
@@ -63,6 +77,12 @@ async function loadConfig() {
   try {
     const saved = localStorage.getItem('CLOUDINARY_NAME');
     if (saved) CONFIG.cloudName = saved.trim();
+
+    const savedKey = localStorage.getItem('CLOUDINARY_KEY');
+    if (savedKey) CONFIG.apiKey = savedKey.trim();
+
+    const savedSecret = localStorage.getItem('CLOUDINARY_SECRET');
+    if (savedSecret) CONFIG.apiSecret = savedSecret.trim();
   } catch (err) {
     // localStorage bị chặn -> bỏ qua
   }
@@ -79,6 +99,8 @@ async function loadConfig() {
     // localStorage được ưu tiên, config.json là fallback
     if (!CONFIG.cloudName && cfg.cloudName)    CONFIG.cloudName = cfg.cloudName.trim();
     if (cfg.uploadPreset)                      CONFIG.uploadPreset = cfg.uploadPreset.trim();
+    if (!CONFIG.apiKey && cfg.apiKey)          CONFIG.apiKey = cfg.apiKey.trim();
+    if (!CONFIG.apiSecret && cfg.apiSecret)    CONFIG.apiSecret = cfg.apiSecret.trim();
 
     console.info('✅ Cloudinary config:', CONFIG.cloudName, '/', CONFIG.uploadPreset);
   } catch (err) {
@@ -98,6 +120,31 @@ window.setCloudName = function (name, preset) {
   console.info('☁️  Cloudinary đã cấu hình:', CONFIG.cloudName, '/', CONFIG.uploadPreset);
 
   toast('Đã cấu hình Cloudinary: ' + CONFIG.cloudName, 'success');
+  return CONFIG;
+};
+
+/**
+ * Gán API Key + Secret từ console (để đọc danh sách ảnh sau reload).
+ *   window.setCloudKeys('123456789012345', 'abc123...')
+ */
+window.setCloudKeys = function (key, secret) {
+  CONFIG.apiKey = (key || '').trim();
+  CONFIG.apiSecret = (secret || '').trim();
+
+  console.info('🔑 Đã cấu hình API keys');
+  toast('Đã lưu API Key/Secret — ảnh sẽ không mất khi reload', 'success');
+
+  // Đọc lại danh sách ngay
+  loadPhotosFromCloudinary().then(list => {
+    if (list && list.length) {
+      photos = list;
+      applyFilters();
+      renderStats();
+      renderAlbumList();
+      toast('Đã tải ' + list.length + ' ảnh từ Cloudinary ☁️', 'success');
+    }
+  });
+
   return CONFIG;
 };
 
@@ -180,6 +227,9 @@ function bindEvents() {
   $('cloudNameInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') saveCloudNameFromInput();
   });
+
+  // Lưu API Key + Secret từ ô trong modal
+  $('btnSaveKeys').addEventListener('click', saveCloudKeysFromInput);
 }
 
 /**
@@ -203,9 +253,45 @@ function saveCloudNameFromInput() {
     // localStorage bị chặn -> không sao, vẫn dùng được trong phiên này
   }
 
-  $('cloudSetup').hidden = true;
-
   toast('Đã lưu Cloud Name: ' + name, 'success');
+}
+
+/**
+ * Lưu API Key + Secret để đọc lại danh sách ảnh sau khi reload.
+ */
+function saveCloudKeysFromInput() {
+  const key = $('apiKeyInput').value.trim();
+  const secret = $('apiSecretInput').value.trim();
+
+  if (!key || !secret) {
+    toast('Cần đủ API Key và API Secret', 'error');
+    return;
+  }
+
+  CONFIG.apiKey = key;
+  CONFIG.apiSecret = secret;
+
+  try {
+    localStorage.setItem('CLOUDINARY_KEY', key);
+    localStorage.setItem('CLOUDINARY_SECRET', secret);
+  } catch (err) {
+    // bỏ qua
+  }
+
+  toast('Đã lưu API Key/Secret 🔑', 'success');
+
+  // Đọc lại danh sách ảnh ngay
+  loadPhotosFromCloudinary().then(list => {
+    if (list && list.length) {
+      photos = list;
+      applyFilters();
+      renderStats();
+      renderAlbumList();
+      toast('Đã tải ' + list.length + ' ảnh từ Cloudinary ☁️', 'success');
+    } else {
+      toast('Không tìm thấy ảnh nào trên Cloudinary', 'error');
+    }
+  });
 }
 
 /* ==========================================================
@@ -233,24 +319,121 @@ function startHearts() {
    LOAD DỮ LIỆU
    ========================================================== */
 
+/**
+ * Nguồn dữ liệu, theo thứ tự ưu tiên:
+ *   1. Cloudinary Admin API  → đọc trực tiếp ảnh đã upload (reload vẫn còn)
+ *   2. data/gallery.json      → dự phòng / dữ liệu mẫu
+ *
+ * Lý do: web là static hosting nên không tự ghi file được.
+ * Lưu metadata trong chính Cloudinary là cách bền vững nhất.
+ */
 async function loadPhotos() {
-  try {
-    const res = await fetch(CONFIG.dataUrl + '?t=' + Date.now(), {
-      cache: 'no-store'
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    photos = Array.isArray(data) ? data : (data.photos || []);
-  } catch (err) {
-    console.warn('Không đọc được data/gallery.json:', err);
-    photos = [];
-    $('footerSub').textContent =
-      'Chưa có dữ liệu — thêm ảnh đầu tiên để bắt đầu!';
+  const fromCloud = await loadPhotosFromCloudinary();
+
+  if (fromCloud && fromCloud.length) {
+    photos = fromCloud;
+    console.info('☁️  Đã tải', photos.length, 'ảnh từ Cloudinary');
+  } else {
+    // Dự phòng: đọc file JSON trong repo
+    try {
+      const res = await fetch(CONFIG.dataUrl + '?t=' + Date.now(), {
+        cache: 'no-store'
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      photos = Array.isArray(data) ? data : (data.photos || []);
+    } catch (err) {
+      console.warn('Không đọc được data/gallery.json:', err);
+      photos = [];
+      $('footerSub').textContent =
+        'Chưa có dữ liệu — thêm ảnh đầu tiên để bắt đầu!';
+    }
   }
 
   applyFilters();
   renderStats();
   renderAlbumList();
+}
+
+/**
+ * Đọc danh sách ảnh từ Cloudinary Admin API.
+ * Cần API Key + API Secret (xem Settings → API Keys).
+ * Trả về null nếu chưa cấu hình, [] nếu không có ảnh.
+ */
+async function loadPhotosFromCloudinary() {
+  const key = CONFIG.apiKey;
+  const secret = CONFIG.apiSecret;
+
+  if (!CONFIG.cloudName || !key || !secret) return null;
+
+  const auth = btoa(key + ':' + secret);
+
+  try {
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${CONFIG.cloudName}/resources/image` +
+      '?tags=true&context=true&max_results=500',
+      { headers: { 'Authorization': 'Basic ' + auth } }
+    );
+
+    if (!res.ok) {
+      console.warn('Cloudinary Admin API lỗi:', res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    const resources = data.resources || [];
+
+    return resources
+      .map(r => normalizeCloudinaryResource(r))
+      .filter(Boolean)
+      .sort((a, b) => (b.uploadedAt || '').localeCompare(a.uploadedAt || ''));
+  } catch (err) {
+    console.warn('Không gọi được Cloudinary Admin API:', err);
+    return null;
+  }
+}
+
+/**
+ * Chuyển 1 resource của Cloudinary về format ảnh của web.
+ * Ưu tiên đọc metadata từ `context`, fallback sang `tags`.
+ */
+function normalizeCloudinaryResource(r) {
+  if (!r || !r.secure_url) return null;
+
+  const ctx = r.context || {};
+
+  // Cloudinary có thể trả context dạng chuỗi "k=v|k=v" hoặc object
+  let note = ctx.note || ctx.caption || '';
+  let date = ctx.date || '';
+  let album = ctx.album || '';
+
+  if (typeof ctx.raw === 'string' && !note) {
+    ctx.raw.split('|').forEach(pair => {
+      const idx = pair.indexOf('=');
+      if (idx < 0) return;
+      const k = pair.slice(0, idx).trim();
+      const v = pair.slice(idx + 1).trim();
+      if (k === 'note') note = v;
+      if (k === 'date') date = v;
+      if (k === 'album') album = v;
+    });
+  }
+
+  // Fallback: dùng tag làm album, tên file làm ghi chú
+  if (!album && Array.isArray(r.tags) && r.tags.length) {
+    album = r.tags.find(t => t !== 'uploaded');
+  }
+  if (!note) note = r.display_name || '';
+
+  return {
+    id: r.public_id,
+    url: r.secure_url,
+    filename: r.original_filename || r.public_id,
+    note: note,
+    date: date,
+    album: album,
+    uploadedAt: r.created_at || r.uploaded_at || ''
+  };
 }
 
 function renderStats() {
@@ -515,10 +698,14 @@ function openUploadModal() {
   $('dateInput').value = new Date().toISOString().slice(0, 10);
   $('albumInput').value = currentAlbum !== 'all' ? currentAlbum : '';
 
-  // Hiện ô cấu hình Cloudinary nếu chưa có
-  $('cloudSetup').hidden = !!CONFIG.cloudName;
-  if (!CONFIG.cloudName) {
+  // Hiện ô cấu hình Cloudinary nếu chưa đủ thông tin
+  const needSetup = !CONFIG.cloudName || !CONFIG.apiKey || !CONFIG.apiSecret;
+  $('cloudSetup').hidden = !needSetup;
+
+  if (needSetup) {
     $('cloudNameInput').value = CONFIG.cloudName || '';
+    $('apiKeyInput').value = CONFIG.apiKey || '';
+    $('apiSecretInput').value = CONFIG.apiSecret || '';
   }
 }
 
@@ -630,9 +817,6 @@ async function doUpload() {
   // Thêm vào danh sách (mới nhất lên đầu)
   photos = uploaded.concat(photos);
 
-  // Lưu metadata ra file JSON (nếu chạy trong môi trường có ghi được)
-  await savePhotos();
-
   closeUploadModal();
   currentAlbum = 'all';
   applyFilters();
@@ -641,11 +825,26 @@ async function doUpload() {
 
   toast(`Đã thêm ${uploaded.length} ảnh vào thư viện 💕`, 'success');
 
-  // Nhắc nhở nếu chưa cấu hình nơi lưu metadata
+  // Nhắc nhở cách lưu metadata lâu dài
   console.info(
-    '💡 Ảnh đã lên Cloudinary. Copy JSON từ console để lưu vào data/gallery.json trên GitHub:\n',
-    JSON.stringify(photos, null, 2)
+    '💡 Ảnh đã lên Cloudinary kèm ghi chú/ngày/album.\n' +
+    '   Để reload vẫn thấy ảnh, cần cấu hình API Key + Secret:\n' +
+    "   window.setCloudKeys('API_KEY', 'API_SECRET')\n" +
+    '   Hoặc sửa data/config.json trên GitHub.'
   );
+}
+
+/**
+ * Escape ký tự đặc biệt của Cloudinary context.
+ * Cloudinary dùng `|` làm dấu phân cách và `=` trong key/value,
+ * nên phải escape bằng backslash.
+ */
+function escapeContextValue(value) {
+  return String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\|/g, '\\|')
+    .replace(/=/g, '\\=')
+    .replace(/[\r\n]/g, ' ');
 }
 
 /**
@@ -662,7 +861,19 @@ function uploadToCloudinary(file, note, date, album) {
 
     // Ghi chú / ngày / album lưu kèm trong Cloudinary (context)
     if (note || date || album) {
-      formData.append('context', `note=${note || ''}|date=${date || ''}|album=${album || ''}`);
+      const ctx = [
+        'note=' + escapeContextValue(note),
+        'date=' + escapeContextValue(date),
+        'album=' + escapeContextValue(album)
+      ].join('|');
+      formData.append('context', ctx);
+    }
+
+    // Lưu album thành tag → dễ lọc trong Media Library
+    if (album) {
+      formData.append('tags', escapeContextValue(album) + ',lovegallery');
+    } else {
+      formData.append('tags', 'lovegallery');
     }
 
     // Tự động nén + tối ưu
@@ -694,24 +905,6 @@ function uploadToCloudinary(file, note, date, album) {
  * Cố gắng lưu metadata. Với static hosting (Vercel/GitHub Pages) không ghi được
  * file server, nên hàm này sẽ báo hướng dẫn lưu thủ công vào data/gallery.json.
  */
-async function savePhotos() {
-  try {
-    const res = await fetch('api/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ photos })
-    });
-
-    if (!res.ok) throw new Error('Server lưu không thành công');
-    return true;
-  } catch (err) {
-    console.warn(
-      'Không lưu tự động được (static hosting). ' +
-      'Hãy copy JSON trong console và lưu vào data/gallery.json trên GitHub.'
-    );
-    return false;
-  }
-}
 
 /* ==========================================================
    TIỆN ÍCH

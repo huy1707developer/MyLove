@@ -188,8 +188,17 @@
             <input type="text" id="cloudNameInput" placeholder="Cloud Name (vd: dxyz12345)">
             <button class="btn btn-soft" id="btnSaveCloud">Lưu</button>
           </div>
+
+          <div class="cloud-keys">
+            <input type="text" id="apiKeyInput" placeholder="API Key (để đọc ảnh sau khi reload)">
+            <input type="password" id="apiSecretInput" placeholder="API Secret">
+            <button class="btn btn-soft" id="btnSaveKeys">Lưu</button>
+          </div>
+
           <p class="cloud-setup-note">
-            Hoặc sửa file <code>data/config.json</code> trên GitHub (lưu lâu dài hơn).
+            <b>Cloud Name</b> để upload ảnh. <b>API Key + Secret</b> để web đọc lại danh sách ảnh
+            sau khi tải lại trang — nếu không có, ảnh đã upload sẽ không hiện lại.<br>
+            Lấy tất cả 3 giá trị tại <b>Cloudinary → Settings → API Keys</b>.
           </p>
         </div>
 

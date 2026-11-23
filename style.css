@@ -866,7 +866,30 @@ button, input, textarea {
   gap: 8px;
 }
 
-.cloud-setup-row input {
+.cloud-keys {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cloud-keys input {
+  flex: 1;
+  padding: 9px 13px;
+  border: 1.5px solid var(--purple-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  outline: none;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.cloud-keys input:focus {
+  border-color: var(--purple-400);
+  box-shadow: 0 0 0 4px rgba(192, 132, 252, .12);
+}
+
+.cloud-setup-row input,
+.cloud-keys input {
   flex: 1;
   padding: 10px 14px;
   border: 1.5px solid var(--purple-200);

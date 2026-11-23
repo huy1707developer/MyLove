@@ -88,37 +88,56 @@ Vercel tự deploy lại. Xong — giờ bạn đã có thể upload ảnh thậ
 
 ## 📝 Cách lưu ghi chú / ngày / album
 
-Vì web là static hosting nên không tự ghi file được. Cách đơn giản nhất:
+**Không cần làm gì thêm!** Ghi chú, ngày tháng và album được lưu **ngay trong Cloudinary** (trường `context` + `tags`) → reload trang ảnh vẫn còn đầy đủ. ✅
 
-### Cách A — Dùng mã tự động (khuyến nghị)
+### Điều kiện: cần API Key + API Secret
 
-Mở **Console** (F12) trên trình duyệt sau khi upload xong. Mình in ra sẵn JSON đầy đủ ở đó:
+Cloudinary **Admin API** dùng Basic Auth, nên web cần 3 giá trị:
 
-```javascript
-console.log(JSON.stringify(photos, null, 2))
-```
+| Tên | Dùng để | Bắt buộc? |
+|---|---|---|
+| **Cloud Name** | Upload ảnh | ✅ Bắt buộc |
+| **API Key** | Đọc danh sách ảnh | ⭐ Nên có |
+| **API Secret** | Đọc danh sách ảnh | ⭐ Nên có |
 
-Copy → mở `data/gallery.json` trên GitHub → dán đè → **Commit changes**.
+Lấy cả 3 tại: **Cloudinary → Settings → API Keys**
 
-Vercel tự deploy lại trong ~10 giây, xong thẻ mới hiện lên.
+### Cách nhập
 
-### Cách B — Sửa trực tiếp trên GitHub
+**Cách A — Nhập trên web (nhanh nhất)**
+1. Bấm **"Thêm ảnh"**
+2. Khối **☁️ Cấu hình Cloudinary** hiện ra
+3. Dán Cloud Name + API Key + API Secret → bấm **Lưu**
+4. Lưu vào trình duyệt (localStorage), dùng lâu dài trên máy này
 
-Mở file `data/gallery.json` trên GitHub → bấm **✏️ Edit** → thêm entry mới theo mẫu:
-
+**Cách B — Sửa `data/config.json` (dùng chung mọi thiết bị)**
 ```json
 {
-  "id": "ten-file-tren-cloudinary",
-  "url": "https://res.cloudinary.com/xxx/image/upload/abc123.jpg",
-  "filename": "ten-anh.jpg",
-  "note": "Lời nhắn của mình cho bạn 💕",
-  "date": "2026-11-21",
-  "album": "Tên album",
-  "uploadedAt": "2026-11-21T12:00:00.000Z"
+  "cloudName": "dxyz12345",
+  "uploadPreset": "gallery_unsigned",
+  "apiKey": "123456789012345",
+  "apiSecret": "abc123..."
 }
 ```
+→ Commit lên GitHub → Vercel deploy lại → xong.
 
-→ **Commit changes** → Vercel deploy lại.
+**Cách C — Console trình duyệt**
+```javascript
+window.setCloudName('dxyz12345')
+window.setCloudKeys('123456789012345', 'abc123...')
+```
+
+### ⚠️ Bảo mật
+
+`apiSecret` trong `data/config.json` là **public** (ai có link cũng đọc được repo). Đây là web gia đình nên chấp nhận được, nhưng nếu bạn lo:
+
+- **Cách an toàn**: dùng localStorage (Cách A) → secret không nằm trong repo
+- **Cách chặn hơn**: tạo Cloudinary API key riêng chỉ cho read (`Manage API Keys` → tạo key giới hạn quyền)
+- Hoặc dùng **Vercel Serverless Function** để giấu secret khỏi client (mình làm thêm nếu bạn muốn)
+
+### Dữ liệu mẫu `data/gallery.json`
+
+File này chỉ chứa ảnh mẫu ban đầu. Khi web đã cấu hình API Key, nó sẽ **đọc ảnh thật từ Cloudinary** và bỏ qua file này.
 
 ---
 
