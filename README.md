@@ -12,7 +12,8 @@ love-gallery/
 ├── style.css           # Giao diện (màu hồng, dễ thương)
 ├── app.js              # Logic: upload, lưới ảnh, lightbox
 ├── api/
-│   └── photos.js       # ⚠️ Serverless Function của Vercel: proxy tới Cloudinary
+│   ├── photos.js       # ⚠️ Serverless Function của Vercel: đọc danh sách ảnh
+│   └── delete.js       # ⚠️ Serverless Function của Vercel: xóa ảnh trên Cloudinary
 ├── data/
 │   ├── config.json     # Cấu hình Cloudinary (Cloud Name, API Key/Secret)
 │   └── gallery.json    # Ảnh fallback khi chưa cấu hình
@@ -185,6 +186,7 @@ deploy Vercel và có config đầy đủ, web sẽ **đọc ảnh thật từ C
 | Tính năng | Mô tả |
 |---|---|
 | 💕 Upload kéo-thả | Chọn nhiều ảnh cùng lúc, có preview trước khi tải |
+| 🗑 Xóa ảnh | Xóa trong lightbox → xóa thật trên Cloudinary (không phải chỉ ẩn) |
 | 🔍 Lightbox | Click ảnh để xem bản gốc sắc nét, phóng to, tải xuống |
 | ⌨️ Phím tắt | `←` `→` đổi ảnh, `Esc` đóng |
 | 🎲 Ngẫu nhiên | Nút xem ảnh ngẫu nhiên |
