@@ -7,6 +7,9 @@
  *   "album": "Tên album",
  *   "date": "2026-11-23",
  *   "note": "Ghi chú",
+ *   "place": "Địa điểm",
+ *   "author": "Anh",
+ *   "music": "https://www.youtube.com/watch?v=...",
  *   "cover": "lovegallery/xyz"      // (tuỳ chọn) public_id của ảnh bìa
  * }
  *
@@ -83,6 +86,9 @@ module.exports = async function handler(req, res) {
     if (body.date !== undefined) ctxParts.push('date=' + esc(body.date));
     if (body.note !== undefined) ctxParts.push('note=' + esc(body.note));
     if (body.cover !== undefined) ctxParts.push('cover=' + esc(body.cover));
+    if (body.place !== undefined) ctxParts.push('place=' + esc(body.place));
+    if (body.author !== undefined) ctxParts.push('author=' + esc(body.author));
+    if (body.music !== undefined) ctxParts.push('music=' + esc(body.music));
 
     if (!ctxParts.length) {
       res.status(400).json({ error: { message: 'Không có gì để cập nhật' } });
