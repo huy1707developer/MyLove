@@ -301,6 +301,9 @@ function bindEvents() {
   // Đổi người đang đăng nhập
   if ($('btnSwitchUser')) $('btnSwitchUser').addEventListener('click', switchUser);
 
+  // Khoá lại trang (quay về màn hình câu hỏi)
+  if ($('btnLockGate')) $('btnLockGate').addEventListener('click', lockGate);
+
   // Nút thêm time capsule
   if ($('btnAddCapsule')) $('btnAddCapsule').addEventListener('click', addCapsule);
 

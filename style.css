@@ -2833,6 +2833,18 @@ body.modal-open { overflow: hidden; }
 
 .role-switch-icon { font-size: 14px; }
 
+/* Nut khoa lai trang */
+.role-switch-lock {
+  border-color: var(--purple-200, #e9d5ff);
+  background: rgba(255, 255, 255, .85);
+  color: #7c3aed;
+}
+
+.role-switch-lock:hover {
+  border-color: #c4b5fd;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, .18);
+}
+
 .author-picker {
   display: flex;
   gap: 8px;

@@ -74,6 +74,10 @@ function initGate() {
     localStorage.setItem('love_user_role', 'Bé Yêu');
   }
 
+  // Gate chi nho trong phien hien tai (sessionStorage).
+  // Dong tab / mo lai trinh duyet -> phai tra loi lai cau hoi ky niem.
+  const gateOk = sessionStorage.getItem('love_gate_passed') === '1';
+
   const saved = currentRole();
   if (saved) {
     gateRole = saved;
@@ -82,9 +86,13 @@ function initGate() {
       document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     }
+  }
+
+  if (gateOk) {
+    // Da qua gate trong phien nay -> vao thang
     $('loveGate').hidden = true;
     document.body.classList.add('gate-passed');
-    // Đã đăng nhập từ trước → vẫn phải khởi tạo các module
+    // Van phai khoi tao cac module
     onGatePassed();
     return;
   }
@@ -152,6 +160,8 @@ function verifyGate() {
   }
 
   localStorage.setItem('love_user_role', gateRole);
+  // Gate chi nho trong phien nay -> dong tab la phai tra loi lai
+  sessionStorage.setItem('love_gate_passed', '1');
   err.textContent = 'Chào mừng ' + gateRole + ' quay trở lại!';
   err.className = 'gate-error ok';
 
@@ -170,6 +180,25 @@ function switchUser() {
   toast('Chào ' + next + '! 💕', 'success');
   renderRoleBadges();
   renderAuthorPicker();
+}
+
+/** Khoa lai trang: xoa gate trong phien -> phai tra loi cau hoi lai */
+function lockGate() {
+  sessionStorage.removeItem('love_gate_passed');
+
+  // Hien lai man hinh gate
+  document.body.classList.remove('gate-passed');
+  $('loveGate').hidden = false;
+  rollGateQuestion();
+
+  // Reset form
+  const pw = $('gatePassword');
+  if (pw) pw.value = '';
+  const err = $('gateError');
+  if (err) { err.textContent = ''; err.className = 'gate-error'; }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('Đã khoá lại 🔒 Phải trả lời câu hỏi mới vào được nha', 'success');
 }
 
 function currentRole() {
