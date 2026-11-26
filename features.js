@@ -902,16 +902,6 @@ function youtubeId(url) {
   }
   return '';
 }
-}
-
-/** Link co phai YouTube khong? */
-function isYouTube(url) {
-  if (!url) return false;
-  const s = String(url).toLowerCase();
-  return s.indexOf('youtube.com') !== -1 ||
-         s.indexOf('youtu.be') !== -1 ||
-         s.indexOf('youtube-nocookie.com') !== -1;
-}
 
 /**
  * Chuyen link YouTube thanh video id.
@@ -920,24 +910,6 @@ function isYouTube(url) {
  * - /embed/ID    -> ID
  * - /shorts/ID   -> ID
  */
-function youtubeId(url) {
-  if (!url) return '';
-  const s = String(url);
-
-  const patterns = [
-    /youtu\.be\/([\w-]{6,})/,
-    /[?&]v=([\w-]{6,})/,
-    /\/embed\/([\w-]{6,})/,
-    /\/shorts\/([\w-]{6,})/,
-    /\/live\/([\w-]{6,})/
-  ];
-
-  for (let i = 0; i < patterns.length; i++) {
-    const m = s.match(patterns[i]);
-    if (m) return m[1];
-  }
-  return '';
-}
 
 /* --- YouTube IFrame Player API --- */
 
