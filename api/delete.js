@@ -2,11 +2,15 @@
  * Vercel Serverless Function — XOÁ ẢNH trên Cloudinary.
  *
  * POST /api/delete
- * Body: { "public_id": "lovegallery/abc123" }
+ * Body: { "public_id": "lovegallery/abc" }              → xóa 1 ảnh
+ *       { "public_ids": ["lovegallery/a", "…/b"] }       → xóa nhiều ảnh
  *
- * ⚠️ Endpoint ĐÚNG của Cloudinary để xóa 1 ảnh là:
+ * ⚠️ Endpoint ĐÚNG của Cloudinary để xóa ảnh là:
  *      POST /v1_1/{cloud}/image/destroy?public_id=...
- *    (Admin API `DELETE /resources/image` KHÔNG tồn tại → trả 404)
+ *
+ *    Các endpoint sau KHÔNG tồn tại (trả 404):
+ *      - DELETE /resources/image?public_ids[]=...
+ *      - POST  /resources/image/delete_resources
  *
  * Cloudinary Admin API không hỗ trợ CORS nên phải gọi qua server-side.
  */
@@ -68,44 +72,51 @@ module.exports = async function handler(req, res) {
   try {
     const auth = 'Basic ' + Buffer.from(API_KEY + ':' + API_SECRET).toString('base64');
 
-    // Cloudinary Admin API xóa nhiều ảnh:
-    //   POST /v1_1/{cloud}/resources/image/delete_resources
-    const url =
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/image/delete_resources`;
+    const deleted = [];
+    const notFound = [];
+    const failed = [];
 
-    const cldRes = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: auth,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ public_ids: safeIds, invalidate: true })
-    });
+    // Xóa từng ảnh qua POST /image/destroy
+    for (const id of safeIds) {
+      const url =
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/destroy` +
+        `?public_id=${encodeURIComponent(id)}&invalidate=true`;
 
-    const body = await cldRes.text();
+      try {
+        const cldRes = await fetch(url, {
+          method: 'POST',
+          headers: { Authorization: auth }
+        });
 
-    let data = {};
-    try { data = JSON.parse(body); } catch (e) { /* giữ nguyên body */ }
+        const body = await cldRes.text();
+        let data = {};
+        try { data = JSON.parse(body); } catch (e) { /* giữ nguyên body */ }
 
-    if (!cldRes.ok) {
-      res.status(cldRes.status).json({
-        error: { message: data.error?.message || ('HTTP ' + cldRes.status) }
+        if (!cldRes.ok) {
+          failed.push({ id, message: data.error?.message || ('HTTP ' + cldRes.status) });
+        } else if (data.result === 'not found') {
+          // Ảnh đã bị xóa trước đó → coi như đã xóa (web vẫn cần bỏ khỏi list)
+          notFound.push(id);
+        } else {
+          deleted.push(id);
+        }
+      } catch (err) {
+        failed.push({ id, message: err.message });
+      }
+    }
+
+    // Có ảnh nào lỗi không → trả lỗi để web biết
+    if (failed.length && !deleted.length && !notFound.length) {
+      res.status(500).json({
+        error: { message: 'Xóa thất bại: ' + failed[0].message }
       });
       return;
     }
 
-    // Cloudinary trả:
-    //   { deleted: { "id1": "ok", "id2": "not found" } }
-    //   { not_found: ["id3"] }
-    const deleted = data.deleted || {};
-    const notFound = data.not_found || [];
-
-    // Ảnh nào không còn trên Cloudinary cũng coi như đã xóa
-    const okIds = Object.keys(deleted).filter(k => deleted[k] === 'ok');
-
     res.status(200).json({
-      deleted: okIds,
+      deleted: deleted,
       not_found: notFound,
+      failed: failed,
       requested: safeIds
     });
   } catch (err) {
