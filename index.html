@@ -189,10 +189,18 @@
   <!-- ======== MODAL XEM ALBUM / CÂU CHUYỆN ======== -->
   <!-- ======== HOP THOI GIAN (TIME CAPSULE) ======== -->
   <section class="capsule-section" id="capsuleSection">
-    <h2 class="section-title">Hộp thời gian <span class="section-sub">&#128274; Mở khi...</span></h2>
-    <p class="section-desc">Những lời nhắn bị giữ lại, chỉ mở được vào đúng ngày đó.</p>
+    <h2 class="section-title">Hộp thời gian <span class="section-sub">&#128274; Kỷ niệm của hai đứa</span></h2>
+    <p class="section-desc">Mỗi phong bì là một kỷ niệm — bạn muốn đọc lúc nào cũng được nhé!</p>
     <div class="capsule-grid" id="capsuleGrid"></div>
     <button class="btn btn-soft btn-sm" id="btnAddCapsule" type="button">+ Thêm phong bì mới</button>
+  </section>
+
+  <!-- ======== LOI NHAC NHO (LUON HIEN THI) ======== -->
+  <section class="reminder-section" id="reminderSection">
+    <h2 class="section-title">Lời nhắc nhở <span class="section-sub">&#128204; Luôn ở đây</span></h2>
+    <p class="section-desc">Những điều hai đứa luôn muốn nhớ — luôn hiển thị, mở lúc nào cũng được.</p>
+    <div class="reminder-grid" id="reminderGrid"></div>
+    <button class="btn btn-soft btn-sm" id="btnAddReminder" type="button">+ Thêm lời nhắc nhở</button>
   </section>
 
   <!-- ======== DIA DIEM KY NIEM ======== -->
@@ -376,10 +384,9 @@
 
       <div class="capsule-modal-head">
         <div class="capsule-modal-emoji" id="capsuleModalEmoji">💌</div>
-        <h2 class="modal-title">Gửi một phong bì tương lai 💌</h2>
+        <h2 class="modal-title">Một kỷ niệm trong phong bì 💌</h2>
         <p class="capsule-modal-sub">
-          Viết một lời nhắn thương nhớ, chọn ngày mở —
-          hai đứa mình sẽ cùng mở ra đọc nhé!
+          Ghi lại một kỷ niệm, một lời nhắc dành cho nhau — bạn muốn đọc lúc nào cũng được.
         </p>
       </div>
 
@@ -404,7 +411,7 @@
       </label>
 
       <label class="field field-wide">
-        <span class="field-label">Mở khi ngày nào?</span>
+        <span class="field-label">Ngày nào ta làm gì? (tùy chỉn)</span>
         <input type="date" id="capsuleDateInput">
         <span class="field-hint" id="capsuleDateHint"></span>
       </label>
@@ -419,6 +426,61 @@
       <div class="modal-actions">
         <button class="btn btn-ghost" id="btnCancelCapsule" type="button">Hủy</button>
         <button class="btn btn-primary" id="btnSaveCapsule" type="button">💌 Gửi phong bì</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== MODAL LOI NHAC NHO ======== -->
+  <div class="modal" id="reminderModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card modal-card-capsule">
+      <button class="modal-close" id="reminderClose" aria-label="Đóng">
+        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+
+      <div class="capsule-modal-head">
+        <div class="capsule-modal-emoji" id="reminderModalEmoji">&#128204;</div>
+        <h2 class="modal-title">Ghi chú cho nhau &#128204;</h2>
+        <p class="capsule-modal-sub">
+          Một lời nhḜ nhở luôn hiện thị trên trang, không cầ đội đến một ngày nào cả.
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Biểu tượng</span>
+        <div class="emoji-picker" id="reminderEmojiPicker">
+          <button type="button" class="emoji-opt active" data-emoji="&#128204;">&#128204;</button>
+          <button type="button" class="emoji-opt" data-emoji="&#128161;">&#128161;</button>
+          <button type="button" class="emoji-opt" data-emoji="&#128172;">&#128172;</button>
+          <button type="button" class="emoji-opt" data-emoji="&#128153;">&#128153;</button>
+          <button type="button" class="emoji-opt" data-emoji="&#127796;">&#127796;</button>
+          <button type="button" class="emoji-opt" data-emoji="&#128176;">&#128176;</button>
+          <button type="button" class="emoji-opt" data-emoji="&#127881;">&#127881;</button>
+          <button type="button" class="emoji-opt" data-emoji="&#10084;&#65039;">&#10084;&#65039;</button>
+        </div>
+      </div>
+
+      <label class="field field-wide">
+        <span class="field-label">Tiêu đề</span>
+        <input type="text" id="reminderTitleInput" maxlength="60"
+               placeholder="VD: Nhớ mua hoa cho Bé Yêu">
+      </label>
+
+      <label class="field field-wide">
+        <span class="field-label">Ngày nào ta làm gì (không bắt buộc)</span>
+        <input type="date" id="reminderDateInput">
+        <span class="field-hint">Để trống nếu chưa biết những ngày nào</span>
+      </label>
+
+      <label class="field field-wide">
+        <span class="field-label">Nội dung lời nhḜ</span>
+        <textarea id="reminderTextInput" rows="4" maxlength="400"
+                  placeholder="Nhớ uống nước nhiều mối ngày nha anh..."></textarea>
+      </label>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btnCancelReminder" type="button">Hủy</button>
+        <button class="btn btn-primary" id="btnSaveReminder" type="button">&#128190; Lưu lời nhḜ</button>
       </div>
     </div>
   </div>
@@ -538,7 +600,7 @@
     <p class="footer-sub" id="footerSub"></p>
   </footer>
 
-  <script src="features.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="features.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

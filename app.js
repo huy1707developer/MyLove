@@ -311,6 +311,9 @@ function bindEvents() {
   // Nút thêm time capsule
   if ($('btnAddCapsule')) $('btnAddCapsule').addEventListener('click', addCapsule);
 
+  // Nút thêm lời nhắc nhở
+  if ($('btnAddReminder')) $('btnAddReminder').addEventListener('click', addReminder);
+
   // Đĩa nhạc / mini player
   bindMusic();
   if (typeof updatePlayerUI === 'function') updatePlayerUI();

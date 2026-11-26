@@ -374,6 +374,7 @@ function bindLoveSettings() {
 
 window.SHARED = {
   capsules: [],
+  reminders: [],
   reactions: {},
   music: '',
   milestones: [],
@@ -397,6 +398,7 @@ async function loadSharedData() {
     const d = j.data || {};
 
     window.SHARED.capsules = d.capsules || [];
+    window.SHARED.reminders = d.reminders || [];
     window.SHARED.reactions = d.reactions || {};
     window.SHARED.music = d.music || '';
     window.SHARED.milestones = d.milestones || [];
@@ -406,6 +408,7 @@ async function loadSharedData() {
     );
 
     renderCapsules();
+    renderReminders();
     renderCountdown();
     renderReactions();
     renderLoveSettings();
@@ -425,6 +428,7 @@ async function saveSharedData() {
       body: JSON.stringify({
         data: {
           capsules: window.SHARED.capsules,
+          reminders: window.SHARED.reminders || [],
           reactions: window.SHARED.reactions,
           music: window.SHARED.music,
           milestones: window.SHARED.milestones,
@@ -463,38 +467,61 @@ function renderCapsules() {
     return;
   }
 
-  list.forEach((c, i) => {
-    const openDate = new Date(c.openDate + 'T00:00:00');
-    const isOpen = openDate <= new Date();
+  list.forEach((c) => {
+    // Phong bi luon co the mo tu do - khong gioi han thoi gian
+    const emoji = c.emoji || '💌';
+    const dateLabel = c.openDate ? formatDate(c.openDate) : '';
 
     const card = document.createElement('article');
-    card.className = 'capsule-card' + (isOpen ? ' is-open' : ' is-locked');
+    card.className = 'capsule-card is-open';
 
-    const emoji = c.emoji || (isOpen ? '💌' : '🔒');
     card.innerHTML =
       '<div class="capsule-emoji">' + emoji + '</div>' +
       '<div class="capsule-title">' + escapeHtml(c.title || 'Phong bi') + '</div>' +
-      '<div class="capsule-date">' + (isOpen ? 'Đã mở' : 'Mở khi ' + formatDate(c.openDate)) + '</div>' +
-      '<div class="capsule-body">' + (isOpen ? escapeHtml(c.message || '') : 'Phong bì này chưa đến ngày mở.') + '</div>' +
-      (isOpen ? '' : '<div class="capsule-count" data-cap="' + i + '"></div>');
-
-    if (!isOpen) {
-      const cd = card.querySelector('.capsule-count');
-      const target = openDate.getTime();
-      const upd = () => {
-        const left = target - Date.now();
-        if (left <= 0) { renderCapsules(); return; }
-        const d = Math.floor(left / 86400000);
-        const h = Math.floor((left % 86400000) / 3600000);
-        const m = Math.floor((left % 3600000) / 60000);
-        cd.textContent = 'Còn ' + d + ' ngày ' + h + ' giờ ' + m + ' phút';
-      };
-      upd();
-      setInterval(upd, 60000);
-    }
+      (dateLabel ? '<div class="capsule-date">' + escapeHtml(dateLabel) + '</div>' : '') +
+      '<div class="capsule-body">' + escapeHtml(c.message || '') + '</div>';
 
     grid.appendChild(card);
   });
+}
+
+/* ------------------------------------------------------------
+   4b. LOI NHAC NHO (LUON HIEN THI)
+   ------------------------------------------------------------ */
+
+function renderReminders() {
+  const grid = $('reminderGrid');
+  if (!grid) return;
+
+  const list = window.SHARED.reminders || [];
+  grid.innerHTML = '';
+
+  if (!list.length) {
+    grid.innerHTML = '<p class="reminder-empty">Chưa có lời nhắc nhở nào. Thêm một ghi chú để luôn nhớ nha!</p>';
+    return;
+  }
+
+  list.forEach((r) => {
+    const card = document.createElement('article');
+    card.className = 'reminder-card';
+
+    const dateLabel = r.date ? formatDate(r.date) : '';
+
+    card.innerHTML =
+      '<div class="reminder-head">' +
+        '<span class="reminder-emoji">' + (r.emoji || '📌') + '</span>' +
+        '<span class="reminder-title">' + escapeHtml(r.title || 'Lời nhắc') + '</span>' +
+      '</div>' +
+      (dateLabel ? '<div class="reminder-date">' + escapeHtml(dateLabel) + '</div>' : '') +
+      '<div class="reminder-body">' + escapeHtml(r.text || '') + '</div>';
+
+    grid.appendChild(card);
+  });
+}
+
+/** Them loi nhac nho moi */
+function addReminder() {
+  openReminderModal();
 }
 
 /** Them phong bi moi — mo pop-up form dep */
@@ -521,10 +548,8 @@ function openCapsuleModal() {
   if (msgInput) msgInput.value = '';
   capsuleEmoji = '💌';
 
-  // Mac dinh: 1 nam sau ngay hien tai
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + 1);
-  if (dateInput) dateInput.value = d.toISOString().slice(0, 10);
+  // Ngay tuy chon (ngay nao ta lam gi) - de trong mac dinh
+  if (dateInput) dateInput.value = '';
 
   // Highlight emoji mac dinh
   document.querySelectorAll('#capsuleEmojiPicker .emoji-opt').forEach(b => {
@@ -608,7 +633,7 @@ function updateCapsuleDateHint() {
 
   const val = dateInput.value;
   if (!val) {
-    hint.textContent = 'Chọn ngày để phong bì tự mở 💌';
+    hint.textContent = 'Không bắt buộc — để trống nếu chưa biết ngày nào 💭';
     hint.className = 'field-hint';
     return;
   }
@@ -625,13 +650,13 @@ function updateCapsuleDateHint() {
   const days = Math.round((d - today) / 86400000);
 
   if (days < 0) {
-    hint.textContent = 'Ngày này đã qua — phong bì sẽ mở ngay lập tức.';
+    hint.textContent = 'Ngày này đã qua.';
     hint.className = 'field-hint warn';
   } else if (days === 0) {
-    hint.textContent = 'Mở ngay hôm nay! Phong bì sẽ bung ra luôn 💝';
+    hint.textContent = 'Hôm nay!';
     hint.className = 'field-hint warn';
   } else {
-    hint.textContent = 'Còn ' + days + ' ngày nữa hai đứa mình mới được mở 💕';
+    hint.textContent = 'Ngày ' + formatDate(val) + ' — phong bì luôn mở được nhé 💕';
     hint.className = 'field-hint';
   }
 }
@@ -652,14 +677,11 @@ async function saveCapsuleFromModal() {
     if (titleEl) titleEl.focus();
     return;
   }
-  if (!dateStr) {
-    toast('Chọn ngày mở phong bì nhé! 📅', 'error');
-    if (dateEl) dateEl.focus();
-    return;
-  }
 
   const btn = $('btnSaveCapsule');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
+
+  if (!Array.isArray(window.SHARED.capsules)) window.SHARED.capsules = [];
 
   window.SHARED.capsules.push({
     id: 'cap_' + Date.now(),
@@ -679,6 +701,152 @@ async function saveCapsuleFromModal() {
     closeCapsuleModal();
     toast('Đã gửi phong bì tương lai 💌', 'success');
   }
+}
+
+/* --- Pop-up them loi nhac nho --- */
+
+let reminderModalBound = false;
+let reminderEmoji = '📌';
+
+function openReminderModal() {
+  const modal = $('reminderModal');
+  if (!modal) { addReminderLegacy(); return; }
+
+  bindReminderModal();
+
+  const titleInput = $('reminderTitleInput');
+  const textInput = $('reminderTextInput');
+  const dateInput = $('reminderDateInput');
+  if (titleInput) titleInput.value = '';
+  if (textInput) textInput.value = '';
+  if (dateInput) dateInput.value = '';
+  reminderEmoji = '📌';
+
+  document.querySelectorAll('#reminderEmojiPicker .emoji-opt').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-emoji') === '📌');
+  });
+  const head = $('reminderModalEmoji');
+  if (head) head.textContent = '📌';
+
+  modal.hidden = false;
+  document.body.classList.add('modal-open');
+
+  setTimeout(() => {
+    const t = $('reminderTitleInput');
+    if (t) t.focus();
+  }, 120);
+}
+
+function closeReminderModal() {
+  const modal = $('reminderModal');
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove('modal-open');
+}
+
+function bindReminderModal() {
+  if (reminderModalBound) return;
+  reminderModalBound = true;
+
+  const modal = $('reminderModal');
+  const closeBtn = $('reminderClose');
+  const cancelBtn = $('btnCancelReminder');
+  const saveBtn = $('btnSaveReminder');
+
+  if (closeBtn) closeBtn.addEventListener('click', closeReminderModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeReminderModal);
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target.hasAttribute('data-close')) closeReminderModal();
+    });
+  }
+
+  document.querySelectorAll('#reminderEmojiPicker .emoji-opt').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#reminderEmojiPicker .emoji-opt')
+        .forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      reminderEmoji = b.getAttribute('data-emoji') || '📌';
+      const head = $('reminderModalEmoji');
+      if (head) head.textContent = reminderEmoji;
+    });
+  });
+
+  if (saveBtn) saveBtn.addEventListener('click', saveReminderFromModal);
+
+  const titleInput = $('reminderTitleInput');
+  if (titleInput) {
+    titleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveReminderFromModal();
+      }
+    });
+  }
+}
+
+/** Luu loi nhac nho tu pop-up */
+async function saveReminderFromModal() {
+  const titleEl = $('reminderTitleInput');
+  const textEl = $('reminderTextInput');
+  const dateEl = $('reminderDateInput');
+
+  const title = titleEl ? titleEl.value.trim() : '';
+  const text = textEl ? textEl.value.trim() : '';
+  const dateStr = dateEl ? dateEl.value : '';
+  const emoji = reminderEmoji || '📌';
+
+  if (!title && !text) {
+    toast('Viết gì đó để nhớ nha! 📝', 'error');
+    if (titleEl) titleEl.focus();
+    return;
+  }
+
+  const btn = $('btnSaveReminder');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang lưu...'; }
+
+  if (!Array.isArray(window.SHARED.reminders)) window.SHARED.reminders = [];
+
+  window.SHARED.reminders.push({
+    id: 'rem_' + Date.now(),
+    title: title,
+    text: text,
+    date: dateStr,
+    emoji: emoji,
+    createdAt: new Date().toISOString()
+  });
+
+  const ok = await saveSharedData();
+
+  if (btn) { btn.disabled = false; btn.textContent = '💾 Lưu lời nhắc'; }
+
+  if (ok) {
+    renderReminders();
+    closeReminderModal();
+    toast('Đã lưu lời nhắc nhở 📌', 'success');
+  }
+}
+
+/** Fallback neu khong co modal */
+function addReminderLegacy() {
+  const title = prompt('Tiêu đề lời nhắc:');
+  if (!title) return;
+  const text = prompt('Nội dung lời nhắc:', '') || '';
+  const dateStr = prompt('Ngày (YYYY-MM-DD, có thể bỏ trống):', '') || '';
+
+  window.SHARED.reminders.push({
+    id: 'rem_' + Date.now(),
+    title: title,
+    text: text,
+    date: dateStr,
+    emoji: '📌',
+    createdAt: new Date().toISOString()
+  });
+
+  saveSharedData().then(ok => {
+    if (ok) { renderReminders(); toast('Đã lưu lời nhắc nhở 📌', 'success'); }
+  });
 }
 
 /** Fallback neu khong co modal (tranh truong hop HTML bi thieu) */
