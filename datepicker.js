@@ -240,6 +240,12 @@
         }
       }
 
+      // Hard clamp inside viewport
+      if (top + ph > vh - 8) top = vh - 8 - ph;
+      if (top < 8) top = 8;
+      if (left + pw > vw - 8) left = vw - 8 - pw;
+      if (left < 8) left = 8;
+
       popup.style.left = Math.round(left) + 'px';
       popup.style.top = Math.round(top) + 'px';
     }
@@ -266,7 +272,16 @@
       useFixed = isClipped();
       popup.classList.toggle('is-fixed', useFixed);
 
-      if (useFixed) positionFixed();
+      if (useFixed) {
+        positionFixed();
+        // Modal may still be animating -> recompute on next frames
+        requestAnimationFrame(function () {
+          if (popup.classList.contains('show')) positionFixed();
+        });
+        setTimeout(function () {
+          if (popup.classList.contains('show')) positionFixed();
+        }, 320);
+      }
 
       box.classList.add('active');
 
