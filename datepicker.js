@@ -1,6 +1,6 @@
 /* ==========================================================
-   BO CHON NGAY TIENG VIET (Hong Pastel)
-   Thay the <input type="date"> de dong bo giao dien + DD/MM/YYYY
+   BỘ CHỌN NGÀY TIẾNG VIỆT (Hồng Pastel)
+   Thay thế <input type="date"> để đồng bộ giao diện + định dạng DD/MM/YYYY
    ========================================================== */
 
 (function () {
@@ -9,15 +9,15 @@
   var ANNIVERSARY = { y: 2024, m: 5, d: 16 };  // 16/05/2024
 
   var MONTH_NAMES = [
-    'Thang 1', 'Thang 2', 'Thang 3', 'Thang 4', 'Thang 5', 'Thang 6',
-    'Thang 7', 'Thang 8', 'Thang 9', 'Thang 10', 'Thang 11', 'Thang 12'
+    'Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+    'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'
   ];
 
   var WEEKDAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
   var uid = 0;
 
-  /** Chuoi YYYY-MM-DD -> Date (coi gio local) */
+  /** Chuỗi YYYY-MM-DD → Date (coi giờ local) */
   function parseISO(s) {
     if (!s) return null;
     var m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -27,14 +27,14 @@
     return d;
   }
 
-  /** Date -> chuoi YYYY-MM-DD */
+  /** Date → chuỗi YYYY-MM-DD */
   function toISO(d) {
     var dd = String(d.getDate()).padStart(2, '0');
     var mm = String(d.getMonth() + 1).padStart(2, '0');
     return d.getFullYear() + '-' + mm + '-' + dd;
   }
 
-  /** Date -> chuoi DD/MM/YYYY */
+  /** Date → chuỗi DD/MM/YYYY */
   function toVN(d) {
     var dd = String(d.getDate()).padStart(2, '0');
     var mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -42,11 +42,11 @@
   }
 
   /**
-   * Tao bo chon ngay.
+   * Tạo bộ chọn ngày.
    * @param {object} opts
-   *   - inputId: id cua <input type="date"> can thay the
-   *   - placeholder: chuoi hien thi khi chua chon ngay
-   *   - allowClear: co nut xoa ngay hay khong
+   *   - inputId: id của <input type="date"> cần thay thế
+   *   - placeholder: chuỗi hiển thị khi chưa chọn ngày
+   *   - allowClear: có nút xoá ngày hay không
    *   - onChange: callback(dateStr)
    */
   function createDatePicker(opts) {
@@ -55,16 +55,14 @@
     var oldInput = document.getElementById(opts.inputId);
     if (!oldInput) return null;
 
-    // Doc gia tri hien tai
+    // Đọc giá trị hiện tại
     var initial = parseISO(oldInput.value);
 
-    // Giu input cu lai (an di) de code cu van doc .value nhu binh thuong
+    // Giữ input cũ lại (ẩn đi) để code cũ vẫn đọc .value như bình thường
     oldInput.type = 'hidden';
     oldInput.classList.add('vn-date-hidden');
     var initialPlaceholder = opts.placeholder ||
-      (oldInput.getAttribute('placeholder') || 'Chon ngay');
-
-    var id = 'vncal' + (++uid);
+      (oldInput.getAttribute('placeholder') || 'Chọn ngày');
 
     var wrap = document.createElement('div');
     wrap.className = 'vn-date-wrapper';
@@ -80,27 +78,27 @@
       '</span>';
 
     var clearBtn = opts.allowClear === false ? '' :
-      '<button type="button" class="vn-cal-action-btn" data-act="clear">Xoa ngay</button>';
+      '<button type="button" class="vn-cal-action-btn" data-act="clear">Xóa ngày</button>';
 
     var popup = document.createElement('div');
     popup.className = 'vn-calendar-popup';
     popup.innerHTML =
       '<div class="vn-cal-header">' +
-        '<button type="button" class="vn-cal-nav-btn" data-step="-1" aria-label="Thang truoc">&#8249;</button>' +
+        '<button type="button" class="vn-cal-nav-btn" data-step="-1" aria-label="Tháng trước">&#8249;</button>' +
         '<div class="vn-cal-selectors">' +
-          '<select class="vn-cal-select" data-role="month" aria-label="Thang"></select>' +
-          '<select class="vn-cal-select" data-role="year" aria-label="Nam"></select>' +
+          '<select class="vn-cal-select" data-role="month" aria-label="Tháng"></select>' +
+          '<select class="vn-cal-select" data-role="year" aria-label="Năm"></select>' +
         '</div>' +
-        '<button type="button" class="vn-cal-nav-btn" data-step="1" aria-label="Thang sau">&#8250;</button>' +
+        '<button type="button" class="vn-cal-nav-btn" data-step="1" aria-label="Tháng sau">&#8250;</button>' +
       '</div>' +
       '<div class="vn-cal-weekdays">' +
         WEEKDAYS.map(function (w) { return '<div>' + w + '</div>'; }).join('') +
       '</div>' +
       '<div class="vn-cal-days"></div>' +
       '<div class="vn-cal-footer">' +
-        '<button type="button" class="vn-cal-action-btn" data-act="anniversary">&#128150; Ngay hen ho (16/05)</button>' +
+        '<button type="button" class="vn-cal-action-btn" data-act="anniversary">&#128150; Ngày hẹn hò (16/05)</button>' +
         clearBtn +
-        '<button type="button" class="vn-cal-action-btn" data-act="today">Hom nay</button>' +
+        '<button type="button" class="vn-cal-action-btn" data-act="today">Hôm nay</button>' +
       '</div>';
 
     wrap.appendChild(box);
@@ -112,13 +110,14 @@
     var selected = initial;
     var viewMonth = selected ? selected.getMonth() : new Date().getMonth();
     var viewYear = selected ? selected.getFullYear() : new Date().getFullYear();
+    var useFixed = false;
 
     var monthSel = popup.querySelector('[data-role="month"]');
     var yearSel = popup.querySelector('[data-role="year"]');
     var daysBox = popup.querySelector('.vn-cal-days');
     var labelEl = box.querySelector('.vn-date-label');
 
-    // --- Khoi tao dropdown ---
+    // --- Khởi tạo dropdown ---
     for (var m = 0; m < 12; m++) {
       var mo = document.createElement('option');
       mo.value = m;
@@ -130,11 +129,11 @@
     for (var y = curYear + 5; y >= 2015; y--) {
       var yo = document.createElement('option');
       yo.value = y;
-      yo.textContent = 'Nam ' + y;
+      yo.textContent = 'Năm ' + y;
       yearSel.appendChild(yo);
     }
 
-    // --- Hien thi ---
+    // --- Hiển thị ---
     function updateDisplay() {
       if (selected) {
         labelEl.textContent = toVN(selected);
@@ -198,10 +197,58 @@
       }
     }
 
+    /**
+     * Popup nằm trong .modal-card (overflow-y:auto) sẽ bị CẮT mất.
+     * Khi đó dùng position:fixed và tự tính toạ độ theo ô nhập.
+     */
+    function positionFixed() {
+      var r = box.getBoundingClientRect();
+      var pw = popup.offsetWidth || 282;
+      var ph = popup.offsetHeight || 300;
+      var vh = window.innerHeight;
+      var vw = window.innerWidth;
+
+      var left = r.left;
+      // Căn phải nếu sát mép phải màn hình
+      if (left + pw > vw - 12) left = Math.max(12, r.right - pw);
+
+      var top = r.bottom + 6;
+      // Nếu không đủ chỗ bên dưới → mở lên trên
+      if (top + ph > vh - 12) {
+        top = Math.max(12, r.top - ph - 6);
+      }
+
+      popup.style.left = Math.round(left) + 'px';
+      popup.style.top = Math.round(top) + 'px';
+    }
+
+    /** Có phải popup đang bị ancestor cắt không? */
+    function isClipped() {
+      var el = wrap.parentElement;
+      while (el && el !== document.body) {
+        var cs = getComputedStyle(el);
+        if (cs.overflow !== 'visible' ||
+            cs.overflowY !== 'visible' ||
+            cs.overflowX !== 'visible') {
+          return true;
+        }
+        el = el.parentElement;
+      }
+      return false;
+    }
+
     function openPopup() {
       popup.classList.add('show');
+
+      // Chọn chế độ hiển thị: fixed nếu bị container cắt
+      useFixed = isClipped();
+      popup.classList.toggle('is-fixed', useFixed);
+
+      if (useFixed) positionFixed();
+
       box.classList.add('active');
-      // Dong cac popup khac
+
+      // Đóng các popup khác
       var others = document.querySelectorAll('.vn-calendar-popup.show');
       for (var i = 0; i < others.length; i++) {
         if (others[i] !== popup) others[i].classList.remove('show');
@@ -214,6 +261,7 @@
 
     function closePopup() {
       popup.classList.remove('show');
+      popup.classList.remove('is-fixed');
       box.classList.remove('active');
     }
 
@@ -245,7 +293,7 @@
       if (typeof opts.onChange === 'function') opts.onChange(oldInput.value);
     }
 
-    // --- Su kien ---
+    // --- Sự kiện ---
     box.addEventListener('click', togglePopup);
     box.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -283,16 +331,21 @@
     monthSel.addEventListener('change', jumpDate);
     yearSel.addEventListener('change', jumpDate);
 
-    // Bam ra ngoai -> dong
+    // Bấm ra ngoài → đóng
     document.addEventListener('click', function (e) {
-      if (!wrap.contains(e.target)) closePopup();
+      if (!wrap.contains(e.target) && !popup.contains(e.target)) closePopup();
     });
 
-    // Dong bang Escape
+    // Đóng bằng Escape
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && popup.classList.contains('show')) {
         closePopup();
       }
+    });
+
+    // Cuộn → cập nhật vị trí popup fixed
+    window.addEventListener('resize', function () {
+      if (popup.classList.contains('show') && useFixed) positionFixed();
     });
 
     updateDisplay();
@@ -323,8 +376,8 @@
   };
 
   /**
-   * Tu dong thay the moi <input type="date"> tim duoc trong DOM.
-   * Ban goi ham nay sau khi DOM da san (DOMContentLoaded).
+   * Tự động thay thế mọi <input type="date"> tìm được trong DOM.
+   * Bạn gọi hàm này sau khi DOM đã sẵn (DOMContentLoaded).
    */
   window.initVNDatePickers = function (map) {
     map = map || {};
