@@ -311,8 +311,9 @@ function bindEvents() {
   // Nút thêm time capsule
   if ($('btnAddCapsule')) $('btnAddCapsule').addEventListener('click', addCapsule);
 
-  // Đĩa nhạc
+  // Đĩa nhạc / mini player
   bindMusic();
+  if (typeof updatePlayerUI === 'function') updatePlayerUI();
 
   // Chọn người đăng trong form upload
   document.querySelectorAll('#authorPicker .author-btn').forEach(b => {
@@ -1285,11 +1286,23 @@ function renderGallery() {
       const mu = document.createElement('button');
       mu.type = 'button';
       mu.className = 'story-tag music';
-      mu.textContent = '🎵 Nhạc kỷ niệm';
+      mu.setAttribute('data-music-url', g.music);
+      mu.setAttribute('data-group-id', g.id || '');
+
+      // Icon + 3 vạch sóng nhạc
+      const eq = document.createElement('span');
+      eq.className = 'music-eq';
+      eq.innerHTML = '<span></span><span></span><span></span>';
+      mu.appendChild(eq);
+
+      const label = document.createElement('span');
+      label.textContent = ' Nhạc kỷ niệm';
+      mu.appendChild(label);
+
       mu.title = g.music;
       mu.addEventListener('click', (e) => {
         e.stopPropagation();
-        playAlbumMusic(g.music);
+        playAlbumMusic(g.music, g.id);
       });
       tags.appendChild(mu);
     }
@@ -1340,6 +1353,9 @@ function renderGallery() {
 
   // Vẽ đường nối sau khi DOM đã có kích thước
   requestAnimationFrame(() => drawTimelinePath(stories, svg, path));
+
+  // Cập nhật playlist nhạc cho mini player
+  if (typeof buildMusicPlaylist === 'function') buildMusicPlaylist();
 }
 
 /**
@@ -1363,11 +1379,14 @@ function drawTimelinePath(container, svg, path) {
   svg.setAttribute('height', box.height);
 
   // Thu thap diem moc: noi tiep giua mep trong cua the (huong ve giua man hinh)
+  // Dịch xuống một chút để đường không đè lên dòng mô tả (vd: "Cuộc sống")
+  const PATH_DROP = 30;
+
   const points = cards.map((card, i) => {
     const r = card.getBoundingClientRect();
     const isOdd = rows[i].classList.contains('odd');
     const x = isOdd ? r.left - box.left : r.right - box.left;
-    const y = r.top - box.top + r.height / 2;
+    const y = r.top - box.top + r.height / 2 + PATH_DROP;
     return { x: x, y: y, side: isOdd ? 'left' : 'right' };
   });
 

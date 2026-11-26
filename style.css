@@ -2249,44 +2249,182 @@ button, input, textarea {
 }
 
 /* ======== NHAC ======== */
-.music-disc {
+/* ======== MINI PLAYER (Floating Pink Vinyl Bar) ======== */
+.cute-player {
   position: fixed;
-  right: 22px;
   bottom: 22px;
+  right: 22px;
   z-index: 800;
-  width: 58px;
-  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid #ffccd5;
+  box-shadow: 0 10px 30px rgba(255, 77, 109, .18);
+  padding: 8px 14px 8px 10px;
+  border-radius: 50px;
+  font-family: var(--font-body);
+  transition: all .35s cubic-bezier(.34, 1.56, .64, 1);
+  max-width: calc(100vw - 44px);
+}
+
+/* Trạng thái thu gọn: chỉ còn đĩa than */
+.cute-player.minimized {
+  padding: 6px;
+  gap: 0;
+}
+
+.cute-player.minimized .player-info,
+.cute-player.minimized .player-controls,
+.cute-player.minimized .toggle-min-btn {
+  display: none;
+}
+
+/* Đĩa than hồng pastel xoay tròn */
+.vinyl-disc {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: none;
-  cursor: pointer;
   background:
-    radial-gradient(circle at 50% 50%, #fff 0 14%, transparent 14.5%),
-    repeating-radial-gradient(circle at 50% 50%, #4a3b40 0 3px, #2f2530 3px 6px);
-  box-shadow: 0 8px 24px rgba(63, 43, 58, .32);
+    radial-gradient(circle at 50% 50%, #fff8fa 0 14%, transparent 14.5%),
+    radial-gradient(circle, #fff0f3 18%, #ff758f 20%, #ff4d6d 55%, #c9184a 100%);
+  box-shadow: 0 4px 12px rgba(201, 24, 74, .3);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform .3s, box-shadow .3s;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  animation: spinVinyl 6s linear infinite;
+  animation-play-state: paused;
+  transition: transform .25s;
 }
 
-.music-disc:hover {
-  transform: scale(1.08);
-  box-shadow: 0 12px 30px rgba(255, 77, 109, .4);
+.vinyl-disc:hover { transform: scale(1.08); }
+
+.vinyl-disc.playing { animation-play-state: running; }
+
+.vinyl-note {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(201, 24, 74, .6);
 }
 
-.music-disc.playing {
-  animation: spinDisc 4s linear infinite;
-}
-
-@keyframes spinDisc {
+@keyframes spinVinyl {
   to { transform: rotate(360deg); }
 }
 
-.music-disc-label {
-  font-size: 15px;
-  color: var(--rose);
-  text-shadow: 0 1px 2px rgba(255, 255, 255, .7);
+/* Tên bài hát & sóng nhạc */
+.player-info {
+  max-width: 150px;
+  overflow: hidden;
 }
+
+.song-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ff758f;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.song-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #594a4e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Hiệu ứng 3 vạch sóng nhạc nhảy */
+.equalizer {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.equalizer span {
+  width: 2px;
+  background: #ff4d6d;
+  border-radius: 2px;
+  height: 3px;
+  transition: .2s;
+}
+
+.equalizer.playing-bars span:nth-child(1) { animation: bounceBar .6s infinite alternate; }
+.equalizer.playing-bars span:nth-child(2) { animation: bounceBar .8s infinite alternate .2s; }
+.equalizer.playing-bars span:nth-child(3) { animation: bounceBar .5s infinite alternate .4s; }
+
+@keyframes bounceBar {
+  0% { height: 3px; }
+  100% { height: 10px; }
+}
+
+/* Cụm nút điều khiển */
+.player-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ctrl-btn {
+  background: #fff0f3;
+  border: none;
+  color: #c9184a;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: .2s;
+  padding: 0;
+}
+
+.ctrl-btn:hover {
+  background: #ffccd5;
+  transform: scale(1.08);
+}
+
+.ctrl-btn.play-main {
+  background: #ff4d6d;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+  box-shadow: 0 3px 10px rgba(255, 77, 109, .3);
+}
+
+.ctrl-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Nút thu gọn */
+.toggle-min-btn {
+  background: transparent;
+  border: none;
+  color: #b59da4;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: .2s;
+}
+
+.toggle-min-btn:hover { color: #ff4d6d; }
 
 /* ======== CAM XUC (lightbox) ======== */
 .lb-reactions {
@@ -2417,9 +2555,39 @@ button, input, textarea {
   color: #6d28d9;
   border-color: #ddd6fe;
   cursor: pointer;
+  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .story-tag.music:hover { background: #ede9fe; }
+
+/* Huy hiệu sóng nhạc — album đang được phát */
+.story-tag.music.active {
+  background: #ff4d6d;
+  border-color: #c9184a;
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(255, 77, 109, .35);
+}
+
+.story-tag.music .music-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+
+.story-tag.music .music-eq span {
+  width: 2.5px;
+  height: 3px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.story-tag.music.active .music-eq span:nth-child(1) { animation: bounceBar .6s infinite alternate; }
+.story-tag.music.active .music-eq span:nth-child(2) { animation: bounceBar .8s infinite alternate .2s; }
+.story-tag.music.active .music-eq span:nth-child(3) { animation: bounceBar .5s infinite alternate .4s; }
 
 /* ======== CHON NGUOI DANG ======== */
 .role-switch {
@@ -2492,7 +2660,18 @@ button, input, textarea {
   .cu-sep { font-size: 20px; }
   .capsule-section, .places-section { padding: 28px 14px 8px; }
   .section-title { font-size: 24px; }
-  .music-disc { width: 48px; height: 48px; right: 14px; bottom: 14px; }
+  .cute-player {
+    bottom: 14px;
+    right: 14px;
+    padding: 6px 11px 6px 7px;
+    gap: 9px;
+  }
+  .player-info { max-width: 96px; }
+  .song-title { font-size: 11.5px; }
+  .song-label { font-size: 9px; }
+  .ctrl-btn { width: 24px; height: 24px; font-size: 11px; }
+  .ctrl-btn.play-main { width: 28px; height: 28px; font-size: 12px; }
+  .vinyl-disc { width: 38px; height: 38px; }
   .gate-card { padding: 26px 20px 22px; }
   .gate-title { font-size: 28px; }
 }

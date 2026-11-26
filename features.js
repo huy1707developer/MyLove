@@ -601,7 +601,11 @@ function renderPlaces() {
 }
 
 /* ------------------------------------------------------------
-   7. NHAC KY NIEM
+   7. NHAC KY NIEM — MINI PLAYER (Floating Pink Vinyl Bar)
+   ------------------------------------------------------------
+   YouTube khong cho <audio> phat truc tiep -> dung YouTube IFrame
+   Player API (chinh chu Google, hoat dong on dinh).
+   Cac link khac (mp3, dropbox...) phat truc tiep qua <audio>.
    ------------------------------------------------------------ */
 
 let ytPlayer = null;        // instance cua YT.Player
@@ -610,34 +614,124 @@ let ytPending = null;       // video id cho san
 let ytIsPlaying = false;    // trang thai phat
 let currentTrackUrl = '';   // link hien tai
 
+let musicPlaylist = [];     // danh sach bai hat (tu cac album co nhac)
+let musicIndex = -1;        // bai hat dang phat
+let musicBound = false;     // da gan su kien hay chua
+
+/** Lay danh sach nhac tu cac album co gan link */
+function buildMusicPlaylist() {
+  const list = [];
+  const groups = (typeof groupPhotos === 'function' && typeof photos !== 'undefined')
+    ? groupPhotos(photos)
+    : [];
+
+  groups.forEach(g => {
+    if (!g.music) return;
+    list.push({
+      url: g.music,
+      title: g.title || 'Chuyến đi của chúng mình',
+      album: g.date || formatDate(g.photos && g.photos[0] ? g.photos[0].uploadedAt : ''),
+      groupId: g.id
+    });
+  });
+
+  musicPlaylist = list;
+  updatePlaylistButtons();
+  return list;
+}
+
+/** Bat/dau trang thai UI cua player */
+function updatePlayerUI() {
+  const disc = $('vinylDisc');
+  const btn = $('playPauseBtn');
+  const eq = $('eqBars');
+  const title = $('songTitle');
+  const albumTag = $('albumTag');
+  const prevBtn = $('btnPrevSong');
+  const nextBtn = $('btnNextSong');
+
+  const track = musicIndex >= 0 ? musicPlaylist[musicIndex] : null;
+
+  if (title) {
+    title.textContent = track ? track.title : 'Chưa chọn bài hát \u{1F495}';
+  }
+  if (albumTag) {
+    albumTag.textContent = track
+      ? (track.album || 'Nhạc của hai đứa')
+      : 'Nhạc của hai đứa';
+  }
+
+  if (disc) disc.classList.toggle('playing', ytIsPlaying);
+  if (eq) eq.classList.toggle('playing-bars', ytIsPlaying);
+  if (btn) btn.innerHTML = ytIsPlaying ? '&#10074;&#10074;' : '&#9654;';
+
+  if (prevBtn) prevBtn.disabled = musicPlaylist.length < 2;
+  if (nextBtn) nextBtn.disabled = musicPlaylist.length < 2;
+
+  // Huy hieu song nhay tren tung album
+  document.querySelectorAll('.story-tag.music').forEach(el => {
+    const isActive = !!(track && el.getAttribute('data-music-url') === track.url);
+    el.classList.toggle('active', isActive);
+  });
+}
+
+/** Gan su kien cho mini player (chi 1 lan) */
 function bindMusic() {
-  const disc = $('musicDisc');
   const audio = $('bgMusic');
-  if (!disc || !audio) return;
+  if (!audio) return;
 
-  disc.addEventListener('click', () => {
-    if (!currentTrackUrl) {
-      toast('Chưa có bài hát nào. Hãy thêm link YouTube ở album nhé!', 'error');
-      return;
+  if (!musicBound) {
+    musicBound = true;
+
+    const disc = $('vinylDisc');
+    const btn = $('playPauseBtn');
+    const prevBtn = $('btnPrevSong');
+    const nextBtn = $('btnNextSong');
+    const minBtn = $('btnMinimizePlayer');
+
+    if (disc) {
+      disc.addEventListener('click', () => {
+        // Neu dang thu gon -> mo rong lai
+        const player = $('cutePlayer');
+        if (player && player.classList.contains('minimized')) {
+          player.classList.remove('minimized');
+          return;
+        }
+        togglePlay();
+      });
+      disc.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          disc.click();
+        }
+      });
     }
-    togglePlay();
-  });
 
-  audio.addEventListener('play', () => {
-    disc.classList.add('playing');
-    ytIsPlaying = true;
-  });
-  audio.addEventListener('pause', () => {
-    if (isYouTube(currentTrackUrl)) return;
-    disc.classList.remove('playing');
-    ytIsPlaying = false;
-  });
-  audio.addEventListener('ended', () => disc.classList.remove('playing'));
+    if (btn) btn.addEventListener('click', togglePlay);
+    if (prevBtn) prevBtn.addEventListener('click', prevSong);
+    if (nextBtn) nextBtn.addEventListener('click', nextSong);
+    if (minBtn) minBtn.addEventListener('click', minimizePlayer);
+
+    audio.addEventListener('play', () => {
+      ytIsPlaying = true;
+      updatePlayerUI();
+    });
+    audio.addEventListener('pause', () => {
+      if (isYouTube(currentTrackUrl)) return;
+      ytIsPlaying = false;
+      updatePlayerUI();
+    });
+    audio.addEventListener('ended', () => {
+      nextSong();
+    });
+  }
+
+  updatePlayerUI();
 }
 
 /** Bat/tay nhac theo trang thai hien tai */
 function togglePlay() {
-  const disc = $('musicDisc');
+  const disc = $('vinylDisc');
   const audio = $('bgMusic');
 
   // Truong hop la YouTube
@@ -646,12 +740,12 @@ function togglePlay() {
     if (ytIsPlaying) {
       ytPlayer.pauseVideo();
       ytIsPlaying = false;
-      if (disc) disc.classList.remove('playing');
+      updatePlayerUI();
     } else {
       try {
         ytPlayer.playVideo();
         ytIsPlaying = true;
-        if (disc) disc.classList.add('playing');
+        updatePlayerUI();
       } catch (err) {
         toast('Không phát được nhạc: ' + err.message, 'error');
       }
@@ -666,24 +760,37 @@ function togglePlay() {
   }
   if (audio.paused) {
     audio.play()
-      .then(() => { if (disc) disc.classList.add('playing'); })
+      .then(() => updatePlayerUI())
       .catch(() => toast('Không phát được nhạc. Thử mở nhạc từ album khác nhé!', 'error'));
   } else {
     audio.pause();
-    if (disc) disc.classList.remove('playing');
+    updatePlayerUI();
   }
 }
 
 /**
  * Phat nhac gan voi 1 album (YouTube / mp3 / dropbox...).
- * YouTube duoc phat qua IFrame Player API (xem createYouTubePlayer).
  */
-function playAlbumMusic(url) {
+function playAlbumMusic(url, groupId) {
   if (!url) return;
+
+  // Tim vi tri trong playlist de dung nut next/prev
+  const found = musicPlaylist.findIndex(t => t.url === url);
+  if (found >= 0) {
+    musicIndex = found;
+  } else {
+    musicPlaylist.push({
+      url: url,
+      title: 'Nhạc kỷ niệm',
+      album: 'Chuyến đi của chúng mình',
+      groupId: groupId || ''
+    });
+    musicIndex = musicPlaylist.length - 1;
+  }
+
   currentTrackUrl = url;
 
   const audio = $('bgMusic');
-  const disc = $('musicDisc');
 
   if (isYouTube(url)) {
     // Tat audio neu dang phat file thuong
@@ -700,8 +807,8 @@ function playAlbumMusic(url) {
     ytPlayer.cueVideoById({ videoId: id, startSeconds: 0 });
     ytPlayer.playVideo();
     ytIsPlaying = true;
-    if (disc) disc.classList.add('playing');
-    toast('🎵 Đang phát nhạc kỷ niệm', 'success');
+    updatePlayerUI();
+    toast('\u{1F3B5} Đang phát nhạc kỷ niệm', 'success');
     return;
   }
 
@@ -710,11 +817,49 @@ function playAlbumMusic(url) {
     audio.src = url;
     audio.play()
       .then(() => {
-        if (disc) disc.classList.add('playing');
-        toast('🎵 Đang phát nhạc kỷ niệm', 'success');
+        updatePlayerUI();
+        toast('\u{1F3B5} Đang phát nhạc kỷ niệm', 'success');
       })
       .catch(() => toast('Không phát được link này', 'error'));
   }
+}
+
+/** Bai hat tiep theo */
+function nextSong() {
+  if (musicPlaylist.length < 2) { togglePlay(); return; }
+  musicIndex = (musicIndex + 1) % musicPlaylist.length;
+  const t = musicPlaylist[musicIndex];
+  playAlbumMusic(t.url, t.groupId);
+}
+
+/** Bai truoc */
+function prevSong() {
+  if (musicPlaylist.length < 2) { togglePlay(); return; }
+  musicIndex = (musicIndex - 1 + musicPlaylist.length) % musicPlaylist.length;
+  const t = musicPlaylist[musicIndex];
+  playAlbumMusic(t.url, t.groupId);
+}
+
+/** Thu gon mini player -> chi con dia than */
+function minimizePlayer(e) {
+  if (e) e.stopPropagation();
+  const player = $('cutePlayer');
+  if (player) player.classList.add('minimized');
+}
+
+/** Mo rong mini player */
+function expandPlayer() {
+  const player = $('cutePlayer');
+  if (player) player.classList.remove('minimized');
+}
+
+/** Bat/trang thai nut next/prev theo so luong bai hat */
+function updatePlaylistButtons() {
+  const prevBtn = $('btnPrevSong');
+  const nextBtn = $('btnNextSong');
+  const has = musicPlaylist.length >= 2;
+  if (prevBtn) prevBtn.disabled = !has;
+  if (nextBtn) nextBtn.disabled = !has;
 }
 
 /** Nhac nen mac dinh */
@@ -725,6 +870,38 @@ function setBackgroundMusic(url) {
     audio.src = url;
     audio.loop = true;
   }
+}
+
+/** Link co phai YouTube khong? */
+function isYouTube(url) {
+  if (!url) return false;
+  const s = String(url).toLowerCase();
+  return s.indexOf('youtube.com') !== -1 ||
+         s.indexOf('youtu.be') !== -1 ||
+         s.indexOf('youtube-nocookie.com') !== -1;
+}
+
+/**
+ * Chuyen link YouTube thanh video id.
+ */
+function youtubeId(url) {
+  if (!url) return '';
+  const s = String(url);
+
+  const patterns = [
+    /youtu\.be\/([\w-]{6,})/,
+    /[?&]v=([\w-]{6,})/,
+    /\/embed\/([\w-]{6,})/,
+    /\/shorts\/([\w-]{6,})/,
+    /\/live\/([\w-]{6,})/
+  ];
+
+  for (let i = 0; i < patterns.length; i++) {
+    const m = s.match(patterns[i]);
+    if (m) return m[1];
+  }
+  return '';
+}
 }
 
 /** Link co phai YouTube khong? */
@@ -816,26 +993,22 @@ function createYouTubePlayer() {
             try {
               e.target.playVideo();
               ytIsPlaying = true;
-              const disc = $('musicDisc');
-              if (disc) disc.classList.add('playing');
+              updatePlayerUI();
             } catch (err) { /* ignore */ }
           }
         },
         onStateChange: (e) => {
-          const disc = $('musicDisc');
           if (e.data === window.YT.PlayerState.PLAYING) {
             ytIsPlaying = true;
-            if (disc) disc.classList.add('playing');
           } else if (e.data === window.YT.PlayerState.PAUSED ||
                      e.data === window.YT.PlayerState.ENDED) {
             ytIsPlaying = false;
-            if (disc) disc.classList.remove('playing');
           }
+          updatePlayerUI();
         },
         onError: (e) => {
           ytIsPlaying = false;
-          const disc = $('musicDisc');
-          if (disc) disc.classList.remove('playing');
+          updatePlayerUI();
           toast('Không phát được video này (mã ' + e.data + ')', 'error');
         }
       }

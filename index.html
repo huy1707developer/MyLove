@@ -202,11 +202,32 @@
     <div class="places-grid" id="placesGrid"></div>
   </section>
 
-  <!-- ======== NHAC KY NIEM ======== -->
-  <button class="music-disc" id="musicDisc" type="button" title="Phát nhạc kỷ niệm" aria-label="Phát nhạc kỷ niệm">
-    <span class="music-disc-core"></span>
-    <span class="music-disc-label">&#9835;</span>
-  </button>
+  <!-- ======== MINI PLAYER NHAC KY NIEM ======== -->
+  <div class="cute-player" id="cutePlayer">
+    <!-- Đĩa than hồng pastel xoay tròn (bấm để mở rộng khi đang thu gọn) -->
+    <div class="vinyl-disc" id="vinylDisc" role="button" tabindex="0" title="Mở trình phát nhạc">
+      <span class="vinyl-note">&#9835;</span>
+    </div>
+
+    <div class="player-info">
+      <div class="song-label">
+        <span class="equalizer" id="eqBars" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span id="albumTag">Nhạc của hai đứa</span>
+      </div>
+      <div class="song-title" id="songTitle">Chưa chọn bài hát 💕</div>
+    </div>
+
+    <div class="player-controls">
+      <button class="ctrl-btn" id="btnPrevSong" type="button" title="Bài trước">&#9198;</button>
+      <button class="ctrl-btn play-main" id="playPauseBtn" type="button" title="Phát / Tạm dừng">&#9654;</button>
+      <button class="ctrl-btn" id="btnNextSong" type="button" title="Bài tiếp">&#9197;</button>
+    </div>
+
+    <button class="toggle-min-btn" id="btnMinimizePlayer" type="button" title="Thu gọn">&#10005;</button>
+  </div>
+
   <audio id="bgMusic" loop preload="none" crossorigin="anonymous"></audio>
 
   <!-- YouTube IFrame Player (ẩn) để phát nhạc kỷ niệm -->
@@ -455,7 +476,7 @@
     <p class="footer-sub" id="footerSub"></p>
   </footer>
 
-  <script src="features.js?v=5"></script>
-  <script src="app.js?v=6"></script>
+  <script src="features.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
