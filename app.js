@@ -328,6 +328,18 @@ function bindEvents() {
   if (btnDefault) {
     btnDefault.addEventListener('click', useDefaultCloudConfig);
   }
+
+  // Vẽ lại đường nối timeline khi đổi kích thước màn hình
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const stories = $('stories');
+      const svg = stories && stories.querySelector('.timeline-svg');
+      const path = svg && svg.querySelector('.timeline-path');
+      if (stories && svg && path) drawTimelinePath(stories, svg, path);
+    }, 150);
+  });
 }
 
 /**
@@ -1067,17 +1079,24 @@ function renderGallery() {
 
   const groups = groupPhotos(filtered);
 
+  // --- SVG vẽ đường nét đứt nối các album ---
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('class', 'timeline-svg');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  stories.appendChild(svg);
+
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('class', 'timeline-path');
+  svg.appendChild(path);
+
   groups.forEach((g, gi) => {
     // --- Hàng chứa 1 album ---
     const row = document.createElement('div');
-    row.className = 'story-row';
+    row.className = 'story-row ' + (gi % 2 === 1 ? 'odd' : 'even');
 
-    // Chấm tròn trên đường nối
-    const dot = document.createElement('span');
-    dot.className = 'story-dot';
-    dot.setAttribute('aria-hidden', 'true');
-    row.appendChild(dot);
-
+    // --- Thẻ album (ảnh bìa) ---
     const cell = document.createElement('article');
     cell.className = 'story';
     cell.style.animationDelay = Math.min(gi * 45, 600) + 'ms';
@@ -1085,61 +1104,53 @@ function renderGallery() {
     cell.setAttribute('role', 'button');
     cell.setAttribute('aria-label', `Mở album ${g.title || 'câu chuyện'} (${g.photos.length} ảnh)`);
 
-    // --- Khung ảnh bên trong ---
-    const frames = document.createElement('div');
-    frames.className = 'story-frames count-' + Math.min(g.photos.length, 3);
+    // Ảnh bìa = ảnh đầu tiên của nhóm
+    const cover = document.createElement('div');
+    cover.className = 'story-cover';
 
-    // Số ảnh hiển thị tối đa trong ô (giống bảng ghép 5 ô)
-    const preview = g.photos.slice(0, 5);
-
-    preview.forEach((p, i) => {
-      const frame = document.createElement('div');
-      frame.className = 'story-frame story-frame-' + (i + 1);
-
+    const first = g.photos[0];
+    if (first) {
       const img = document.createElement('img');
       img.loading = 'lazy';
       img.decoding = 'async';
-      img.src = cloudinaryUrl(p.url, 'w_500,q_auto,f_auto');
-      img.alt = p.note || 'Ảnh khoảnh khắc';
+      img.src = cloudinaryUrl(first.url, 'w_500,q_auto,f_auto');
+      img.alt = first.note || g.title || 'Ảnh bìa album';
       img.onerror = function () {
-        if (this.src !== p.url) {
+        if (this.src !== first.url) {
           this.onerror = null;
-          this.src = p.url;
-          this.onerror = function () { markMissing(this, p); };
+          this.src = first.url;
+          this.onerror = function () { markMissing(this, first); };
         } else {
-          markMissing(this, p);
+          markMissing(this, first);
         }
       };
+      cover.appendChild(img);
+    }
 
-      frame.appendChild(img);
-      frames.appendChild(frame);
-    });
+    // Badge số ảnh
+    const badge = document.createElement('span');
+    badge.className = 'story-badge';
+    badge.textContent = g.photos.length;
+    badge.title = g.photos.length + ' ảnh trong album';
+    cell.appendChild(badge);
 
-    // Dấu "+" góc phải (như hình mẫu)
+    // Dấu "+" nhỏ dưới thẻ
     const plus = document.createElement('span');
     plus.className = 'story-plus';
     plus.textContent = '+';
-    plus.title = g.photos.length + ' ảnh trong album';
-    frames.appendChild(plus);
+    plus.setAttribute('aria-hidden', 'true');
+    cell.appendChild(plus);
 
-    cell.appendChild(frames);
+    cell.appendChild(cover);
 
-    // --- Thông tin nhóm ---
+    // --- Thông tin album (bên đối diện thẻ) ---
     const info = document.createElement('div');
     info.className = 'story-info';
+    info.style.animationDelay = Math.min(gi * 45 + 80, 660) + 'ms';
 
     const title = document.createElement('h3');
     title.className = 'story-title';
-
-    const titleText = document.createElement('span');
-    titleText.textContent = g.title || 'Khoảnh khắc của chúng mình';
-    title.appendChild(titleText);
-
-    const pill = document.createElement('span');
-    pill.className = 'count-pill';
-    pill.textContent = g.photos.length + ' ảnh';
-    title.appendChild(pill);
-
+    title.textContent = g.title || 'Khoảnh khắc của chúng mình';
     info.appendChild(title);
 
     const sub = document.createElement('div');
@@ -1149,11 +1160,15 @@ function renderGallery() {
       const d = document.createElement('span');
       d.textContent = formatDate(g.date);
       sub.appendChild(d);
-    } else {
-      const d = document.createElement('span');
-      d.textContent = 'Chưa đặt ngày';
-      sub.appendChild(d);
     }
+
+    const sep = document.createElement('span');
+    sep.textContent = '·';
+    sub.appendChild(sep);
+
+    const cnt = document.createElement('span');
+    cnt.textContent = g.photos.length + ' ảnh';
+    sub.appendChild(cnt);
 
     info.appendChild(sub);
 
@@ -1163,8 +1178,6 @@ function renderGallery() {
       note.textContent = g.note;
       info.appendChild(note);
     }
-
-    cell.appendChild(info);
 
     // Mở album khi bấm
     const open = () => openAlbum(g.id);
@@ -1177,25 +1190,20 @@ function renderGallery() {
     });
 
     row.appendChild(cell);
+    row.appendChild(info);
     stories.appendChild(row);
   });
 
-  // --- Hàng cuối: ô "+ Thêm album" ---
+  // --- Nút thêm album ở cuối timeline ---
   const addRow = document.createElement('div');
-  addRow.className = 'story-row';
-
-  const addDot = document.createElement('span');
-  addDot.className = 'story-dot';
-  addDot.setAttribute('aria-hidden', 'true');
-  addRow.appendChild(addDot);
+  addRow.className = 'story-row story-row-add';
 
   const addBtn = document.createElement('button');
   addBtn.className = 'story-add';
   addBtn.type = 'button';
   addBtn.innerHTML =
     '<span class="story-add-icon">+</span>' +
-    '<span>Thêm album mới</span>' +
-    '<small style="font-weight:400;opacity:.75">Upload ảnh → tự tạo 1 câu chuyện</small>';
+    '<span>Thêm album</span>';
 
   addBtn.addEventListener('click', () => {
     uploadTargetGroupId = null;
@@ -1205,6 +1213,61 @@ function renderGallery() {
 
   addRow.appendChild(addBtn);
   stories.appendChild(addRow);
+
+  // Vẽ đường nối sau khi DOM đã có kích thước
+  requestAnimationFrame(() => drawTimelinePath(stories, svg, path));
+}
+
+/**
+ * Vẽ đường nét đứt uốn lượn nối giữa các thẻ album.
+ *
+ * Cách tính:
+ *   - Lấy vị trí giữa mép trong của mỗi thẻ album (điểm mốc)
+ *   - Nối bằng đường cong Bezier, xen kẽ trái-phải
+ */
+function drawTimelinePath(container, svg, path) {
+  const cards = container.querySelectorAll('.story-row:not(.story-row-add) .story');
+  if (cards.length < 2) {
+    path.setAttribute('d', '');
+    return;
+  }
+
+  const box = container.getBoundingClientRect();
+  svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+  svg.setAttribute('width', box.width);
+  svg.setAttribute('height', box.height);
+
+  // Thu thập các điểm mốc
+  const points = [...cards].map(card => {
+    const r = card.getBoundingClientRect();
+    const isEven = card.closest('.story-row').classList.contains('story-row') &&
+                   [...container.querySelectorAll('.story-row:not(.story-row-add)')]
+                     .indexOf(card.closest('.story-row')) % 2 === 1;
+
+    // Điểm mốc nằm ở mép trong (hướng về giữa) của thẻ
+    const x = isEven ? r.right - box.left : r.left - box.left;
+    const y = r.top - box.top + r.height / 2;
+    return { x, y, side: isEven ? 'right' : 'left' };
+  });
+
+  // Tạo path nối các điểm bằng đường cong Bezier
+  let d = `M ${points[0].x} ${points[0].y}`;
+
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const cur = points[i];
+    const dy = (cur.y - prev.y) / 2;
+
+    // Uốn lượn: điểm rẽ ra ngoài rồi quay lại
+    const c1x = prev.x + (prev.side === 'left' ? -55 : 55);
+    const c1y = prev.y + dy * 0.55;
+    const c2x = cur.x + (cur.side === 'left' ? -55 : 55);
+    const c2y = cur.y - dy * 0.55;
+
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${cur.x} ${cur.y}`;
+  }
+
+  path.setAttribute('d', d);
 }
 
 /* ==========================================================
