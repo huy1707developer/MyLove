@@ -1988,6 +1988,8 @@ function openUploadModal() {
   $('noteInput').value = '';
   $('dateInput').value = new Date().toISOString().slice(0, 10);
   $('albumInput').value = currentAlbum !== 'all' ? currentAlbum : '';
+  if ($('placeInput')) $('placeInput').value = '';
+  if ($('musicInput')) $('musicInput').value = '';
 
   // Nếu đang thêm ảnh vào một album cụ thể → ghi nhớ để gom vào cùng nhóm
   if (uploadTargetGroupId) {
@@ -2097,6 +2099,7 @@ async function doUpload() {
   const date = $('dateInput').value;
   const album = $('albumInput').value.trim();
   const place = $('placeInput') ? $('placeInput').value.trim() : '';
+  const music = $('musicInput') ? $('musicInput').value.trim() : '';
 
   // Nguoi dang: mac dinh la nguoi dang nhap, hoac chon trong form
   let author = currentRole();
@@ -2124,7 +2127,7 @@ async function doUpload() {
         date,
         album,
         groupId,
-        { place: place, author: author, music: '' }
+        { place: place, author: author, music: music }
       );
       uploaded.push(result);
     } catch (err) {
