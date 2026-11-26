@@ -53,6 +53,10 @@ let searchTerm = '';
 let currentIndex = -1;    // index trong filtered của lightbox
 let pendingFiles = [];    // file đang chờ upload
 
+// Khi đang thêm ảnh vào 1 album cụ thể (không null = gom vào album đó)
+let uploadTargetGroupId = null;
+let uploadTargetGroupTitle = '';
+
 const $ = (id) => document.getElementById(id);
 
 /* ==========================================================
@@ -280,13 +284,33 @@ function bindEvents() {
     if (e.target === $('lightbox')) closeLightbox();
   });
 
+  // Album view
+  $('albumClose').addEventListener('click', closeAlbum);
+  $('albumView').addEventListener('click', (e) => {
+    if (e.target.hasAttribute('data-close-album')) closeAlbum();
+  });
+  $('btnEditAlbum').addEventListener('click', () => toggleAlbumEdit());
+  $('btnCancelAlbumEdit').addEventListener('click', () => toggleAlbumEdit(false));
+  $('btnSaveAlbumEdit').addEventListener('click', saveAlbumEdit);
+  $('btnDeleteAlbum').addEventListener('click', deleteAlbum);
+  $('btnAddToAlbum').addEventListener('click', startAddToAlbum);
+
   // Phím tắt
   document.addEventListener('keydown', (e) => {
+    // Lightbox đang mở → ưu tiên xử lý lightbox
     if (!$('lightbox').hidden) {
       if (e.key === 'Escape')     closeLightbox();
       if (e.key === 'ArrowLeft')  navigateLightbox(-1);
       if (e.key === 'ArrowRight') navigateLightbox(1);
+      return;
     }
+
+    // Album view đang mở → Escape đóng album
+    if (!$('albumView').hidden && e.key === 'Escape') {
+      closeAlbum();
+      return;
+    }
+
     if (!$('uploadModal').hidden && e.key === 'Escape') closeUploadModal();
   });
 
@@ -778,6 +802,7 @@ function normalizeCloudinaryResource(r) {
   let note = '';
   let date = '';
   let album = '';
+  let groupId = '';
 
   // 1. Dạng object: context.custom.* hoặc context.* trực tiếp
   const ctx = r.context;
@@ -785,9 +810,10 @@ function normalizeCloudinaryResource(r) {
   if (ctx && typeof ctx === 'object') {
     const src = (ctx.custom && typeof ctx.custom === 'object') ? ctx.custom : ctx;
 
-    note  = src.note  || src.caption || '';
-    date  = src.date  || '';
-    album = src.album || '';
+    note    = src.note  || src.caption || '';
+    date    = src.date  || '';
+    album   = src.album || '';
+    groupId = src.gid   || src.groupId || src.group || '';
   }
 
   // 2. Dạng chuỗi "k=v|k=v" (một số phiên bản SDK trả về)
@@ -797,9 +823,10 @@ function normalizeCloudinaryResource(r) {
       if (idx < 0) return;
       const k = pair.slice(0, idx).trim();
       const v = pair.slice(idx + 1).trim();
-      if (k === 'note')  note = v;
-      if (k === 'date')  date = v;
-      if (k === 'album') album = v;
+      if (k === 'note')    note = v;
+      if (k === 'date')    date = v;
+      if (k === 'album')   album = v;
+      if (k === 'gid')     groupId = v;
     });
   }
 
@@ -812,6 +839,11 @@ function normalizeCloudinaryResource(r) {
   // 4. Fallback: dùng tên file làm ghi chú
   if (!note) note = r.display_name || r.original_filename || '';
 
+  // 5. Ảnh cũ (upload trước khi có groupId) → tự gom theo ngày chụp
+  if (!groupId) {
+    groupId = 'legacy-' + (date || r.created_at || r.public_id);
+  }
+
   return {
     id: r.public_id,
     url: r.secure_url,
@@ -819,6 +851,7 @@ function normalizeCloudinaryResource(r) {
     note: note,
     date: date,
     album: album,
+    groupId: groupId,
     uploadedAt: r.created_at || r.uploaded_at || ''
   };
 }
@@ -826,8 +859,16 @@ function normalizeCloudinaryResource(r) {
 function renderStats() {
   $('statPhotos').textContent = photos.length;
 
-  const albums = new Set(photos.map(p => p.album).filter(Boolean));
-  $('statAlbums').textContent = albums.size;
+  // Số "câu chuyện" = số nhóm ảnh
+  const groups = groupPhotos(photos);
+  const statAlbums = document.getElementById('statAlbums');
+  if (statAlbums) statAlbums.textContent = groups.length;
+
+  // Đổi nhãn "album" → "câu chuyện"
+  const statLabel = statAlbums && statAlbums.nextElementSibling;
+  if (statLabel && statLabel.classList.contains('stat-label')) {
+    statLabel.textContent = 'câu chuyện';
+  }
 
   const dates = photos.map(p => p.date).filter(Boolean).sort();
   if (dates.length) {
@@ -836,7 +877,8 @@ function renderStats() {
       month: '2-digit', year: 'numeric'
     });
     $('footerSub').textContent =
-      'Từ ' + d.toLocaleDateString('vi-VN') + ' đến nay — ' + photos.length + ' khoảnh khắc đã lưu 💗';
+      'Từ ' + d.toLocaleDateString('vi-VN') + ' đến nay — ' +
+      photos.length + ' khoảnh khắc trong ' + groups.length + ' câu chuyện 💗';
   }
 }
 
@@ -931,17 +973,76 @@ function markMissing(img, p) {
   if (img.parentNode) img.parentNode.appendChild(ph);
 }
 
+/**
+ * Gom ảnh thành các "câu chuyện" (nhóm).
+ *
+ * Quy tắc:
+ *   1. Ảnh có `groupId` (mã lần upload) → gom theo groupId.
+ *      → Ảnh upload cùng lúc luôn nằm chung 1 nhóm. ✅
+ *   2. Ảnh cũ không có groupId → gom theo album, sau đó theo ngày.
+ */
+function groupPhotos(list) {
+  const map = new Map();
+
+  list.forEach(p => {
+    // Ảnh có groupId → nhóm theo groupId
+    // Ảnh cũ → nhóm theo album, hoặc theo ngày nếu không có album
+    let key;
+    if (p.groupId) {
+      key = p.groupId;
+    } else if (p.album) {
+      key = 'album:' + p.album;
+    } else if (p.date) {
+      key = 'date:' + p.date;
+    } else {
+      key = 'solo:' + p.id;
+    }
+
+    if (!map.has(key)) {
+      map.set(key, {
+        id: key,
+        title: p.album || '',
+        note: p.note || '',
+        date: p.date || '',
+        photos: []
+      });
+    }
+
+    const g = map.get(key);
+    g.photos.push(p);
+
+    // Lấy thông tin nhóm từ ảnh đầu tiên có metadata đầy đủ nhất
+    if (!g.title && p.album) g.title = p.album;
+    if (!g.date && p.date) g.date = p.date;
+    if (!g.note && p.note) g.note = p.note;
+  });
+
+  // Sắp xếp nhóm mới nhất lên đầu
+  return [...map.values()].sort((a, b) => {
+    const ta = a.photos[0]?.uploadedAt || '';
+    const tb = b.photos[0]?.uploadedAt || '';
+    return (tb || '').localeCompare(ta || '');
+  });
+}
+
+/**
+ * Render danh sách câu chuyện dạng "story grid" — mỗi nhóm là 1 ô lớn
+ * với các ảnh con xếp lệch nhau (giống hình Instagram / bảng ghép ảnh).
+ */
 function renderGallery() {
   const gallery = $('gallery');
+  const stories = $('stories');
   const empty = $('emptyState');
   const noRes = $('noResult');
   const loadMore = $('loadMoreWrap');
 
   gallery.innerHTML = '';
+  stories.innerHTML = '';
 
   // Chưa có ảnh nào
   if (!photos.length) {
     gallery.hidden = true;
+    stories.hidden = true;
     empty.hidden = false;
     noRes.hidden = true;
     loadMore.hidden = true;
@@ -953,30 +1054,171 @@ function renderGallery() {
   // Có ảnh nhưng không tìm thấy
   if (!filtered.length) {
     gallery.hidden = true;
+    stories.hidden = true;
     noRes.hidden = false;
     loadMore.hidden = true;
     return;
   }
 
   noRes.hidden = true;
-  gallery.hidden = false;
+  gallery.hidden = true;
+  stories.hidden = false;
+  loadMore.hidden = true;
 
-  const slice = filtered.slice(0, visibleCount);
+  const groups = groupPhotos(filtered);
 
-  slice.forEach((p, i) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.animationDelay = Math.min(i * 22, 500) + 'ms';
+  groups.forEach((g, gi) => {
+    const cell = document.createElement('article');
+    cell.className = 'story';
+    cell.style.animationDelay = Math.min(gi * 45, 600) + 'ms';
+    cell.setAttribute('tabindex', '0');
+    cell.setAttribute('role', 'button');
+    cell.setAttribute('aria-label', `Mở album ${g.title || 'câu chuyện'} (${g.photos.length} ảnh)`);
 
-    // Ảnh thumbnail (dùng biến thể w_600 của Cloudinary để load nhanh)
+    // --- Khung ảnh bên trong ---
+    const frames = document.createElement('div');
+    frames.className = 'story-frames';
+
+    // Số ảnh hiển thị tối đa trong ô (giống bảng ghép 4 ô)
+    const preview = g.photos.slice(0, 5);
+
+    preview.forEach((p, i) => {
+      const frame = document.createElement('div');
+      frame.className = 'story-frame story-frame-' + (i + 1);
+
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.src = cloudinaryUrl(p.url, 'w_500,q_auto,f_auto');
+      img.alt = p.note || 'Ảnh khoảnh khắc';
+      img.onerror = function () {
+        if (this.src !== p.url) {
+          this.onerror = null;
+          this.src = p.url;
+          this.onerror = function () { markMissing(this, p); };
+        } else {
+          markMissing(this, p);
+        }
+      };
+
+      frame.appendChild(img);
+      frames.appendChild(frame);
+    });
+
+    // Dấu "+" nối các khung (giống ảnh mẫu)
+    if (g.photos.length > 1) {
+      const plus = document.createElement('span');
+      plus.className = 'story-plus';
+      plus.textContent = '+';
+      frames.appendChild(plus);
+    }
+
+    cell.appendChild(frames);
+
+    // --- Thông tin nhóm ---
+    const info = document.createElement('div');
+    info.className = 'story-info';
+
+    const title = document.createElement('h3');
+    title.className = 'story-title';
+    title.textContent = g.title || 'Khoảnh khắc của chúng mình';
+    info.appendChild(title);
+
+    const sub = document.createElement('div');
+    sub.className = 'story-sub';
+
+    const count = document.createElement('span');
+    count.textContent = g.photos.length + ' ảnh';
+    sub.appendChild(count);
+
+    if (g.date) {
+      const sep = document.createElement('span');
+      sep.className = 'dot-sep';
+      sep.textContent = '•';
+      sub.appendChild(sep);
+
+      const d = document.createElement('span');
+      d.textContent = formatDate(g.date);
+      sub.appendChild(d);
+    }
+
+    info.appendChild(sub);
+
+    if (g.note) {
+      const note = document.createElement('p');
+      note.className = 'story-note';
+      note.textContent = g.note;
+      info.appendChild(note);
+    }
+
+    cell.appendChild(info);
+
+    // Mở album khi bấm
+    const open = () => openAlbum(g.id);
+    cell.addEventListener('click', open);
+    cell.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open();
+      }
+    });
+
+    stories.appendChild(cell);
+  });
+}
+
+/* ==========================================================
+   ALBUM VIEW (xem 1 câu chuyện / nhóm ảnh)
+   ========================================================== */
+
+let currentAlbumId = null;   // id của nhóm đang mở
+let albumPhotos = [];         // ảnh trong nhóm đang mở
+
+/**
+ * Mở album (nhóm ảnh) — hiển thị dạng modal toàn màn hình.
+ */
+function openAlbum(groupId) {
+  const groups = groupPhotos(filtered);
+  const g = groups.find(x => x.id === groupId);
+  if (!g) return;
+
+  currentAlbumId = groupId;
+  albumPhotos = g.photos;
+
+  $('albumTitle').textContent = g.title || 'Khoảnh khắc của chúng mình';
+  $('albumCount').textContent = g.photos.length + ' ảnh';
+  $('albumDate').textContent = g.date ? formatDate(g.date) : '';
+
+  // Điền sẵn form sửa
+  $('albumEditName').value = g.title || '';
+  $('albumEditDate').value = g.date || '';
+  $('albumEditNote').value = g.note || '';
+  $('albumEdit').hidden = true;
+
+  renderAlbumGrid();
+
+  $('albumView').hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Render lưới ảnh bên trong album.
+ */
+function renderAlbumGrid() {
+  const grid = $('albumGrid');
+  grid.innerHTML = '';
+
+  albumPhotos.forEach((p, i) => {
+    const cell = document.createElement('figure');
+    cell.className = 'album-cell';
+    cell.style.animationDelay = Math.min(i * 30, 400) + 'ms';
+
     const img = document.createElement('img');
-    img.className = 'card-img';
     img.loading = 'lazy';
     img.decoding = 'async';
-    img.src = cloudinaryUrl(p.url, 'w_600,q_auto,f_auto');
+    img.src = cloudinaryUrl(p.url, 'w_800,q_auto,f_auto');
     img.alt = p.note || 'Ảnh khoảnh khắc';
     img.onerror = function () {
-      // Thử ảnh gốc (không có transformation)
       if (this.src !== p.url) {
         this.onerror = null;
         this.src = p.url;
@@ -986,64 +1228,202 @@ function renderGallery() {
       }
     };
 
-    card.appendChild(img);
+    cell.appendChild(img);
 
-    // Badge album
-    if (p.album) {
-      const badge = document.createElement('span');
-      badge.className = 'card-badge';
-      badge.textContent = p.album;
-      card.appendChild(badge);
+    // Ghi chú riêng của ảnh
+    if (p.note && p.note !== $('albumEditNote').value) {
+      const cap = document.createElement('figcaption');
+      cap.textContent = p.note;
+      cell.appendChild(cap);
     }
 
-    // Overlay ghi chú
-    const overlay = document.createElement('div');
-    overlay.className = 'card-overlay';
+    cell.addEventListener('click', () => openAlbumLightbox(i));
 
-    if (p.note) {
-      const note = document.createElement('p');
-      note.className = 'card-note';
-      note.textContent = p.note;
-      overlay.appendChild(note);
-    }
-
-    const meta = document.createElement('div');
-    meta.className = 'card-meta';
-    if (p.date) {
-      const d = document.createElement('span');
-      d.textContent = formatDate(p.date);
-      meta.appendChild(d);
-    }
-    if (p.note && p.date) {
-      const sep = document.createElement('span');
-      sep.className = 'sep';
-      sep.textContent = '•';
-      meta.appendChild(sep);
-    }
-    const zoom = document.createElement('span');
-    zoom.textContent = '🔍 Xem rõ nét';
-    meta.appendChild(zoom);
-    overlay.appendChild(meta);
-
-    card.appendChild(overlay);
-
-    card.addEventListener('click', () => openLightbox(i));
-
-    gallery.appendChild(card);
+    grid.appendChild(cell);
   });
+}
 
-  // Nút xem thêm
-  loadMore.hidden = visibleCount >= filtered.length;
+/**
+ * Mở lightbox nhưng chỉ trong phạm vi album đang xem.
+ */
+function openAlbumLightbox(index) {
+  // Tạm đổi filtered sang ảnh của album để lightbox dùng chung logic
+  const savedFiltered = filtered;
+  filtered = albumPhotos;
+  openLightbox(index, () => { filtered = savedFiltered; });
+}
+
+/**
+ * Đóng album view.
+ */
+function closeAlbum() {
+  $('albumView').hidden = true;
+  $('albumEdit').hidden = true;
+  document.body.style.overflow = '';
+  currentAlbumId = null;
+  albumPhotos = [];
+}
+
+/**
+ * Bắt đầu thêm ảnh vào album đang mở.
+ * Ảnh mới sẽ dùng chung groupId → tự động nằm chung 1 câu chuyện.
+ */
+function startAddToAlbum() {
+  if (!currentAlbumId) return;
+
+  uploadTargetGroupId = currentAlbumId;
+  uploadTargetGroupTitle = $('albumTitle').textContent;
+
+  // Mở modal upload (album view vẫn mở phía sau)
+  openUploadModal();
+}
+
+/**
+ * Bật/tắt form sửa thông tin album.
+ */
+function toggleAlbumEdit(show) {
+  const box = $('albumEdit');
+  box.hidden = show === undefined ? !box.hidden : !show;
+  $('btnEditAlbum').textContent = box.hidden ? '✏️ Sửa thông tin' : '✏️ Đang sửa...';
+}
+
+/**
+ * Lưu thông tin album mới → ghi đè lên tất cả ảnh trong nhóm.
+ */
+async function saveAlbumEdit() {
+  if (!currentAlbumId) return;
+
+  const name = $('albumEditName').value.trim();
+  const date = $('albumEditDate').value;
+  const note = $('albumEditNote').value.trim();
+
+  const btn = $('btnSaveAlbumEdit');
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang lưu...';
+
+  try {
+    // Gọi API cập nhật metadata trên Cloudinary cho từng ảnh
+    const res = await fetch('/api/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        public_ids: albumPhotos.map(p => p.id),
+        album: name,
+        date: date,
+        note: note
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error((data && data.error && data.error.message) || ('HTTP ' + res.status));
+    }
+
+    // Cập nhật trong bộ nhớ
+    albumPhotos.forEach(p => {
+      p.album = name;
+      p.date = date;
+      if (note) p.note = note;
+    });
+
+    // Đồng bộ lại toàn bộ photos (cùng groupId)
+    photos.forEach(p => {
+      if (p.groupId === currentAlbumId) {
+        p.album = name;
+        p.date = date;
+        if (note) p.note = note;
+      }
+    });
+
+    savePhotosToLocal();
+
+    // Render lại
+    applyFilters();
+    renderStats();
+    renderAlbumList();
+
+    $('albumTitle').textContent = name || 'Khoảnh khắc của chúng mình';
+    $('albumCount').textContent = albumPhotos.length + ' ảnh';
+    $('albumDate').textContent = date ? formatDate(date) : '';
+    renderAlbumGrid();
+
+    toggleAlbumEdit(false);
+    toast('Đã lưu thông tin album 💾', 'success');
+  } catch (err) {
+    console.error('❌ Lỗi lưu album:', err);
+    toast('Không lưu được: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 Lưu';
+  }
+}
+
+/**
+ * Xóa cả album (tất cả ảnh trong nhóm) khỏi Cloudinary.
+ */
+async function deleteAlbum() {
+  if (!currentAlbumId) return;
+
+  const n = albumPhotos.length;
+  const title = $('albumTitle').textContent;
+
+  const ok = await confirmDialog(
+    'Xóa cả album?',
+    `Xóa album "${title}" gồm ${n} ảnh? Tất cả ảnh sẽ bị xóa vĩnh viễn trên Cloudinary và không thể khôi phục.`,
+    'Xóa album'
+  );
+
+  if (!ok) return;
+
+  const btn = $('btnDeleteAlbum');
+  btn.disabled = true;
+  btn.textContent = '⏳ Đang xóa...';
+
+  try {
+    const res = await fetch('/api/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ public_ids: albumPhotos.map(p => p.id) })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error((data && data.error && data.error.message) || ('HTTP ' + res.status));
+    }
+
+    // Xóa khỏi bộ nhớ
+    const ids = new Set(albumPhotos.map(p => p.id));
+    photos = photos.filter(p => !ids.has(p.id));
+    savePhotosToLocal();
+
+    closeAlbum();
+    applyFilters();
+    renderStats();
+    renderAlbumList();
+
+    toast('Đã xóa album "' + title + '" 🗑', 'success');
+  } catch (err) {
+    console.error('❌ Lỗi xóa album:', err);
+    toast('Không xóa được: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🗑 Xóa album';
+  }
 }
 
 /* ==========================================================
    LIGHTBOX
    ========================================================== */
 
-function openLightbox(index) {
+function openLightbox(index, onClose) {
   currentIndex = index;
   const p = filtered[index];
   if (!p) return;
+
+  // Callback sẽ chạy khi đóng lightbox (dùng cho album view)
+  window.__lightboxOnClose = onClose || null;
 
   const lb = $('lightbox');
   lb.hidden = false;
@@ -1092,13 +1472,24 @@ function openLightbox(index) {
 function navigateLightbox(direction) {
   if (!filtered.length) return;
   currentIndex = (currentIndex + direction + filtered.length) % filtered.length;
-  openLightbox(currentIndex);
+  openLightbox(currentIndex, window.__lightboxOnClose);
 }
 
 function closeLightbox() {
   $('lightbox').hidden = true;
-  document.body.style.overflow = '';
   currentIndex = -1;
+
+  // Gọi callback (khôi phục filtered khi đóng lightbox trong album view)
+  const cb = window.__lightboxOnClose;
+  window.__lightboxOnClose = null;
+  if (cb) {
+    try { cb(); } catch (e) { /* bỏ qua */ }
+  }
+
+  // Nếu đang ở trong album view → giữ nguyên overflow hidden
+  if ($('albumView').hidden) {
+    document.body.style.overflow = '';
+  }
 }
 
 /* ==========================================================
@@ -1150,9 +1541,8 @@ async function deleteCurrentPhoto() {
         throw new Error(msg);
       }
 
-      // Cloudinary trả { result: "ok" } hoặc { result: "not found" }
-      // "not found" = ảnh đã bị xóa trước đó → vẫn coi là thành công
-      if (data.result === 'not found') {
+      // Ảnh không còn trên Cloudinary vẫn coi là đã xóa (web cần bỏ nó khỏi list)
+      if (data.not_found && data.not_found.includes(p.id)) {
         console.info('ℹ️ Ảnh đã không còn trên Cloudinary:', p.id);
       }
     }
@@ -1160,6 +1550,17 @@ async function deleteCurrentPhoto() {
     // Xóa khỏi bộ nhớ + localStorage
     photos = photos.filter(x => x.id !== p.id);
     savePhotosToLocal();
+
+    // Nếu đang ở trong album view → cập nhật album đó
+    if (!$('albumView').hidden) {
+      albumPhotos = albumPhotos.filter(x => x.id !== p.id);
+      if (!albumPhotos.length) {
+        closeAlbum();
+      } else {
+        $('albumCount').textContent = albumPhotos.length + ' ảnh';
+        renderAlbumGrid();
+      }
+    }
 
     // Đóng lightbox, rồi render lại (applyFilters lọc lại filtered từ photos)
     closeLightbox();
@@ -1237,6 +1638,11 @@ function openUploadModal() {
   $('dateInput').value = new Date().toISOString().slice(0, 10);
   $('albumInput').value = currentAlbum !== 'all' ? currentAlbum : '';
 
+  // Nếu đang thêm ảnh vào một album cụ thể → ghi nhớ để gom vào cùng nhóm
+  if (uploadTargetGroupId) {
+    $('albumInput').value = uploadTargetGroupTitle || $('albumInput').value;
+  }
+
   // Hiện ô cấu hình Cloudinary nếu chưa đủ thông tin
   const needSetup = !CONFIG.cloudName || !CONFIG.apiKey || !CONFIG.apiSecret;
   $('cloudSetup').hidden = !needSetup;
@@ -1252,6 +1658,15 @@ function closeUploadModal() {
   document.body.style.overflow = '';
   pendingFiles = [];
   renderPreviews();
+
+  // Album view vẫn mở phía sau → giữ nguyên overflow hidden
+  if (!$('albumView').hidden) {
+    document.body.style.overflow = 'hidden';
+  } else {
+    // Không còn album view → reset mục tiêu thêm ảnh
+    uploadTargetGroupId = null;
+    uploadTargetGroupTitle = '';
+  }
 }
 
 function addFiles(fileList) {
@@ -1330,6 +1745,13 @@ async function doUpload() {
   const note = $('noteInput').value.trim();
   const date = $('dateInput').value;
   const album = $('albumInput').value.trim();
+
+  // Mỗi lần upload = 1 nhóm/câu chuyện riêng.
+  // Nếu đang thêm vào 1 album cụ thể → dùng lại groupId của album đó.
+  const groupId = uploadTargetGroupId
+    ? uploadTargetGroupId
+    : 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
   const btn = $('btnDoUpload');
   btn.disabled = true;
 
@@ -1339,7 +1761,13 @@ async function doUpload() {
     $('uploadBtnText').textContent = `Đang tải ${i + 1}/${pendingFiles.length}...`;
 
     try {
-      const result = await uploadToCloudinary(pendingFiles[i], note, date, album);
+      const result = await uploadToCloudinary(
+        pendingFiles[i],
+        note,
+        date,
+        album,
+        groupId
+      );
       uploaded.push(result);
     } catch (err) {
       console.error(err);
@@ -1358,12 +1786,28 @@ async function doUpload() {
   // Lưu vào localStorage → reload không bị mất
   savePhotosToLocal();
 
+  const wasAddingToAlbum = !!uploadTargetGroupId;
+  const addedGroupId = groupId;
+
   closeUploadModal();
+  uploadTargetGroupId = null;
+  uploadTargetGroupTitle = '';
+
   currentAlbum = 'all';
   applyFilters();
   renderStats();
   renderAlbumList();
   renderExportBar();
+
+  // Nếu đang thêm vào album → mở lại album đó để user thấy ảnh mới
+  if (wasAddingToAlbum) {
+    const g = groupPhotos(filtered).find(x => x.id === addedGroupId);
+    if (g) {
+      openAlbum(g.id);
+      toast(`Đã thêm ${uploaded.length} ảnh vào album 💕`, 'success');
+      return;
+    }
+  }
 
   toast(`Đã thêm ${uploaded.length} ảnh vào thư viện 💕`, 'success');
 
@@ -1391,9 +1835,11 @@ function escapeContextValue(value) {
 
 /**
  * Upload 1 file lên Cloudinary.
- * Trả về object metadata theo đúng format của gallery.json
+ *
+ * `groupId` là mã định danh của "lần upload" (mỗi lần bấm Tải lên = 1 nhóm).
+ * Nhờ đó web gom các ảnh upload cùng lúc thành 1 album/câu chuyện.
  */
-function uploadToCloudinary(file, note, date, album) {
+function uploadToCloudinary(file, note, date, album, groupId) {
   return new Promise((resolve, reject) => {
     const url = `https://api.cloudinary.com/v1_1/${CONFIG.cloudName}/image/upload`;
 
@@ -1401,15 +1847,14 @@ function uploadToCloudinary(file, note, date, album) {
     formData.append('file', file);
     formData.append('upload_preset', CONFIG.uploadPreset);
 
-    // Ghi chú / ngày / album lưu kèm trong Cloudinary (context)
-    if (note || date || album) {
-      const ctx = [
-        'note=' + escapeContextValue(note),
-        'date=' + escapeContextValue(date),
-        'album=' + escapeContextValue(album)
-      ].join('|');
-      formData.append('context', ctx);
-    }
+    // Ghi chú / ngày / album / mã nhóm lưu kèm trong Cloudinary (context)
+    const ctxParts = [
+      'note=' + escapeContextValue(note),
+      'date=' + escapeContextValue(date),
+      'album=' + escapeContextValue(album),
+      'gid=' + escapeContextValue(groupId)
+    ];
+    formData.append('context', ctxParts.join('|'));
 
     // Gom ảnh vào folder riêng cho dễ quản lý trong Media Library
     formData.append('folder', 'lovegallery');
@@ -1439,6 +1884,7 @@ function uploadToCloudinary(file, note, date, album) {
           note: note || '',
           date: date || '',
           album: album || '',
+          groupId: groupId || '',
           uploadedAt: new Date().toISOString()
         });
       })

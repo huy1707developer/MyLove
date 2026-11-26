@@ -478,6 +478,313 @@ button, input, textarea {
   padding: 34px 20px 80px;
 }
 
+/* ==========================================================
+   CÂU CHUYỆN (STORY GRID) — mỗi nhóm ảnh = 1 ô ghép ảnh
+   ========================================================== */
+
+.stories {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 26px;
+}
+
+.story {
+  position: relative;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform .35s cubic-bezier(.2, .8, .3, 1), box-shadow .35s;
+  animation: fadeUp .5s backwards;
+  outline: none;
+}
+
+.story:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+}
+
+.story:focus-visible {
+  box-shadow: var(--shadow-lg), 0 0 0 3px var(--pink-300);
+}
+
+/* --- Khung ảnh xếp lệch nhau --- */
+.story-frames {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 6px;
+  aspect-ratio: 1 / 1;
+  margin-bottom: 12px;
+}
+
+.story-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--pink-50);
+}
+
+.story-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .5s cubic-bezier(.2, .8, .3, 1);
+}
+
+.story:hover .story-frame img { transform: scale(1.06); }
+
+/* Ảnh 1 chiếm 2x2 */
+.story-frame-1 {
+  grid-column: 1 / 3;
+  grid-row: 1 / 3;
+}
+
+/* Khi chỉ có 1 ảnh */
+.story-frames:has(.story-frame-1:only-child) {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.story-frames:has(.story-frame-1:only-child) .story-frame-1 {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+/* Dấu "+" nối các khung */
+.story-plus {
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--pink-500);
+  border: 2px solid var(--pink-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+  z-index: 3;
+}
+
+/* --- Thông tin nhóm --- */
+.story-info { padding: 4px 4px 2px; }
+
+.story-title {
+  margin: 0 0 4px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: 'Quicksand', sans-serif;
+}
+
+.story-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-mute);
+  margin-bottom: 6px;
+}
+
+.story-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-mute);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ==========================================================
+   ALBUM VIEW (modal xem nhóm ảnh)
+   ========================================================== */
+
+.album-view {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.album-view[hidden] { display: none; }
+
+.album-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(40, 25, 50, .55);
+  backdrop-filter: blur(6px);
+  animation: fadeIn .2s ease;
+}
+
+.album-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1000px;
+  max-height: 88vh;
+  background: var(--white);
+  border-radius: 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: popIn .28s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.album-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1.5px solid var(--pink-100);
+  flex-shrink: 0;
+}
+
+.album-title {
+  margin: 0 0 4px;
+  font-family: 'Dancing Script', cursive;
+  font-size: 30px;
+  color: var(--pink-600);
+  line-height: 1.2;
+}
+
+.album-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--ink-mute);
+}
+
+.album-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.album-close {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: var(--pink-50);
+  color: var(--pink-600);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .2s;
+}
+
+.album-close:hover { background: var(--pink-100); }
+
+.album-close svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+/* --- Form sửa thông tin --- */
+.album-edit {
+  padding: 16px 24px;
+  background: var(--pink-50);
+  border-bottom: 1.5px solid var(--pink-100);
+  flex-shrink: 0;
+  animation: fadeIn .2s ease;
+}
+
+.album-edit[hidden] { display: none; }
+
+.album-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field-wide { grid-column: 1 / -1; }
+
+.album-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* --- Lưới ảnh trong album --- */
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 20px 24px 26px;
+  overflow-y: auto;
+}
+
+.album-cell {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--pink-50);
+  cursor: zoom-in;
+  animation: fadeUp .4s backwards;
+  transition: transform .3s;
+}
+
+.album-cell:hover { transform: translateY(-4px) scale(1.02); }
+
+.album-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.album-cell figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px 10px 8px;
+  background: linear-gradient(to top, rgba(40, 25, 50, .82), transparent);
+  color: #fff;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .stories { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+  .album-view { padding: 0; }
+  .album-panel { max-width: 100%; max-height: 100%; height: 100%; border-radius: 0; }
+  .album-head { padding: 16px 18px 12px; flex-direction: column; }
+  .album-head-actions { width: 100%; }
+  .album-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); padding: 16px 18px 22px; }
+  .album-edit-grid { grid-template-columns: 1fr; }
+  .album-title { font-size: 25px; }
+}
+
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));

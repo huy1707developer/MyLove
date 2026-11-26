@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khoảnh Khắc Của Chúng Mình 💕</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Dancing+Script:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bg-decor" aria-hidden="true">
+    <div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div>
+    <div class="hearts" id="hearts"></div>
+  </div>
+
+  <header class="hero"><div class="hero-inner">
+    <div class="hero-badge"><span class="dot"></span>Khoảnh Khắc Của Chúng Mình</div>
+    <h1 class="hero-title">Nơi lưu giữ những ngày<br><span class="script">đẹp nhất của hai chúng mình</span></h1>
+    <p class="hero-sub">Mỗi tấm ảnh ở đây đều là một câu chuyện.<br>Bấm vào để xem rõ nét nhé!</p>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num" id="statPhotos">0</span><span class="stat-label">tấm ảnh</span></div>
+      <div class="stat-sep">·</div>
+      <div class="stat"><span class="stat-num" id="statAlbums">0</span><span class="stat-label">câu chuyện</span></div>
+      <div class="stat-sep">·</div>
+      <div class="stat"><span class="stat-num" id="statSince">—</span><span class="stat-label">từ ngày</span></div>
+    </div>
+  </div></header>
+
+  <div class="toolbar" id="toolbar"><div class="toolbar-inner">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" class="search-icon"><path d="M21 21l-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z"/></svg>
+      <input type="search" id="searchInput" placeholder="Tìm theo ghi chú, ngày tháng, album..." autocomplete="off">
+    </div>
+    <div class="filters" id="filters"></div>
+    <div class="toolbar-actions">
+      <button class="btn btn-primary" id="btnUpload"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Thêm ảnh</button>
+      <button class="btn btn-ghost" id="btnRefresh" title="Quét lại ảnh từ Cloudinary"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+      <button class="btn btn-ghost" id="btnShuffle" title="Xem ngẫu nhiên"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button>
+    </div>
+  </div></div>
+
+  <main class="container">
+    <div class="stories" id="stories"></div>
+    <div class="gallery" id="gallery" hidden></div>
+    <div class="empty" id="emptyState" hidden>
+      <div class="empty-emoji">📷</div><h3>Chưa có ảnh nào</h3>
+      <p>Hãy thêm những tấm ảnh đầu tiên của hai chúng mình nhé!</p>
+    </div>
+    <div class="no-result" id="noResult" hidden><div class="empty-emoji">🔍</div><h3>Không tìm thấy ảnh nào</h3><p>Thử tìm với từ khóa khác nhé.</p></div>
+    <div class="load-more-wrap" id="loadMoreWrap" hidden><button class="btn btn-soft" id="btnLoadMore">Xem thêm ảnh</button></div>
+  </main>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-close" id="lbClose"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    <button class="lb-nav lb-prev" id="lbPrev"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <button class="lb-nav lb-next" id="lbNext"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    <figure class="lb-figure">
+      <div class="lb-image-wrap"><img id="lbImage" src="" alt=""><div class="lb-spinner" id="lbSpinner"></div></div>
+      <figcaption class="lb-caption">
+        <p id="lbNote" class="lb-note"></p>
+        <div class="lb-meta"><span id="lbDate"></span><span class="dot-sep">•</span><span id="lbAlbum"></span></div>
+        <div class="lb-tools">
+          <a id="lbDownload" class="btn btn-soft" download>⬇ Tải ảnh</a>
+          <a id="lbShare" class="btn btn-soft" target="_blank" rel="noopener">🔗 Mở ảnh gốc</a>
+          <button class="btn btn-danger" id="lbDelete" type="button">🗑 Xóa ảnh</button>
+        </div>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="album-view" id="albumView" hidden>
+    <div class="album-backdrop" data-close-album></div>
+    <div class="album-panel">
+      <header class="album-head">
+        <div class="album-head-info">
+          <h2 class="album-title" id="albumTitle">Album</h2>
+          <div class="album-meta"><span id="albumCount">0 ảnh</span><span class="dot-sep">•</span><span id="albumDate"></span></div>
+        </div>
+        <div class="album-head-actions">
+          <button class="btn btn-soft btn-sm" id="btnAddToAlbum" type="button">➕ Thêm ảnh</button>
+          <button class="btn btn-soft btn-sm" id="btnEditAlbum" type="button">✏️ Sửa thông tin</button>
+          <button class="btn btn-danger btn-sm" id="btnDeleteAlbum" type="button">🗑 Xóa album</button>
+          <button class="album-close" id="albumClose"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+        </div>
+      </header>
+      <div class="album-edit" id="albumEdit" hidden>
+        <div class="album-edit-grid">
+          <label class="field"><span class="field-label">Tên album</span><input type="text" id="albumEditName" placeholder="VD: Hội An..."></label>
+          <label class="field"><span class="field-label">Ngày chụp</span><input type="date" id="albumEditDate"></label>
+          <label class="field field-wide"><span class="field-label">Ghi chú</span><textarea id="albumEditNote" rows="2"></textarea></label>
+        </div>
+        <div class="album-edit-actions">
+          <button class="btn btn-ghost btn-sm" id="btnCancelAlbumEdit" type="button">Hủy</button>
+          <button class="btn btn-primary btn-sm" id="btnSaveAlbumEdit" type="button">💾 Lưu</button>
+        </div>
+      </div>
+      <div class="album-grid" id="albumGrid"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="uploadModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card">
+      <button class="modal-close" id="modalClose"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <h2 class="modal-title">Thêm ảnh mới 💕</h2>
+      <div class="dropzone" id="dropzone">
+        <div class="dz-icon">🌸</div><p class="dz-title">Kéo thả ảnh vào đây</p><p class="dz-sub">hoặc</p>
+        <button class="btn btn-soft" id="btnPick">Chọn ảnh từ máy</button>
+        <p class="dz-hint">JPG · PNG · WEBP · GIF — tối đa 10MB mỗi ảnh</p>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      </div>
+      <div class="upload-form" id="uploadForm" hidden>
+        <label class="field"><span class="field-label">Ghi chú cho tấm ảnh</span><textarea id="noteInput" rows="3"></textarea></label>
+        <label class="field"><span class="field-label">Ngày chụp</span><input type="date" id="dateInput"></label>
+        <label class="field"><span class="field-label">Album</span><input type="text" id="albumInput" list="albumList"><datalist id="albumList"></datalist></label>
+        <div class="cloud-setup" id="cloudSetup" hidden>
+          <div class="cloud-setup-head"><span class="cloud-setup-icon">☁️</span><div><strong>Cấu hình Cloudinary</strong><p>Lấy Cloud Name tại Cloudinary → Settings → API Keys</p></div></div>
+          <div class="cloud-setup-row"><input type="text" id="cloudNameInput" placeholder="Cloud Name"><button class="btn btn-soft" id="btnSaveCloud">Lưu</button></div>
+          <div class="cloud-keys"><input type="text" id="apiKeyInput" placeholder="API Key"><input type="password" id="apiSecretInput" placeholder="API Secret"><button class="btn btn-soft" id="btnSaveKeys">Lưu</button></div>
+          <p class="cloud-setup-note"><b>Cloud Name</b> để upload ảnh. <b>API Key + Secret</b> để web đọc lại danh sách ảnh.</p>
+          <button class="btn btn-soft btn-block" id="btnUseDefaultCloud" type="button">⚡ Dùng cấu hình có sẵn</button>
+        </div>
+        <div class="preview-row" id="previewRow"></div>
+        <div class="modal-actions"><button class="btn btn-ghost" id="btnCancelUpload">Hủy</button><button class="btn btn-primary" id="btnDoUpload"><span id="uploadBtnText">Tải lên</span></button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+  <footer class="footer"><p>Được làm bằng tất cả tấm lòng 💗</p><p class="footer-sub" id="footerSub"></p></footer>
+
+  <script>
+    // Dữ liệu giả để test giao diện
+    var IMGS = [];
+    function mk(n, gid, album, date, note, label){
+      for(var i=1;i<=n;i++){
+        IMGS.push({
+          id: gid+'_'+i,
+          url: 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600">' +
+            '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+            '<stop offset="0" stop-color="hsl('+((i*47+label*23)%360)+',80%,80%)"/>' +
+            '<stop offset="1" stop-color="hsl('+((i*47+label*23+40)%360)+',75%,60%)"/>' +
+            '</linearGradient></defs><rect width="600" height="600" fill="url(#g)"/>' +
+            '<text x="300" y="330" font-size="110" font-family="sans-serif" fill="rgba(255,255,255,.9)" text-anchor="middle">'+(i)+'</text>' +
+            '</svg>'),
+          filename: 'photo'+i+'.jpg',
+          note: note,
+          date: date,
+          album: album,
+          groupId: gid,
+          uploadedAt: '2026-11-'+(20+label)+'T0'+(label)+':00:00.000Z'
+        });
+      }
+    }
+    mk(4,'gA','Hội An','2026-11-20','Chiều bên bờ sông Huế',1);
+    mk(2,'gB','Kỷ niệm','2026-11-22','Ngày đầu tiên đi chơi',2);
+    mk(5,'gC','Du lịch Đà Lạt','2026-11-18','Sương mù trên đồi',3);
+    mk(1,'gD','Một mình','2026-11-23','Chỉ mình em',4);
+    window.__SEED = IMGS;
+  </script>
+  <script src="app.js?v=3"></script>
+  <script>
+    // Ghi đè loadPhotos để dùng data giả
+    window.addEventListener('load', function(){
+      setTimeout(function(){
+        photos = window.__SEED.slice();
+        filtered = photos.slice();
+        applyFilters();
+        renderStats();
+        renderAlbumList();
+      }, 300);
+    });
+  </script>
+</body>
+</html>

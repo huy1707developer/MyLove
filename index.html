@@ -99,7 +99,10 @@
 
   <!-- ======== LƯỚI ẢNH ======== -->
   <main class="container">
-    <div class="gallery" id="gallery"></div>
+    <!-- Danh sách câu chuyện (mỗi nhóm ảnh upload chung 1 lần) -->
+    <div class="stories" id="stories"></div>
+
+    <div class="gallery" id="gallery" hidden></div>
 
     <div class="empty" id="emptyState" hidden>
       <div class="empty-emoji">📷</div>
@@ -122,6 +125,58 @@
       <button class="btn btn-soft" id="btnLoadMore">Xem thêm ảnh</button>
     </div>
   </main>
+
+  <!-- ======== MODAL XEM ALBUM / CÂU CHUYỆN ======== -->
+  <div class="album-view" id="albumView" hidden>
+    <div class="album-backdrop" data-close-album></div>
+
+    <div class="album-panel" role="dialog" aria-modal="true" aria-labelledby="albumTitle">
+      <header class="album-head">
+        <div class="album-head-info">
+          <h2 class="album-title" id="albumTitle">Album</h2>
+          <div class="album-meta">
+            <span id="albumCount">0 ảnh</span>
+            <span class="dot-sep">•</span>
+            <span id="albumDate"></span>
+          </div>
+        </div>
+
+        <div class="album-head-actions">
+          <button class="btn btn-soft btn-sm" id="btnAddToAlbum" type="button">➕ Thêm ảnh</button>
+          <button class="btn btn-soft btn-sm" id="btnEditAlbum" type="button">✏️ Sửa thông tin</button>
+          <button class="btn btn-danger btn-sm" id="btnDeleteAlbum" type="button">🗑 Xóa album</button>
+          <button class="album-close" id="albumClose" aria-label="Đóng">
+            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Form sửa thông tin album -->
+      <div class="album-edit" id="albumEdit" hidden>
+        <div class="album-edit-grid">
+          <label class="field">
+            <span class="field-label">Tên album</span>
+            <input type="text" id="albumEditName" placeholder="VD: Hội An, Kỷ niệm...">
+          </label>
+          <label class="field">
+            <span class="field-label">Ngày chụp</span>
+            <input type="date" id="albumEditDate">
+          </label>
+          <label class="field field-wide">
+            <span class="field-label">Ghi chú</span>
+            <textarea id="albumEditNote" rows="2" placeholder="Câu chuyện của album này..."></textarea>
+          </label>
+        </div>
+        <div class="album-edit-actions">
+          <button class="btn btn-ghost btn-sm" id="btnCancelAlbumEdit" type="button">Hủy</button>
+          <button class="btn btn-primary btn-sm" id="btnSaveAlbumEdit" type="button">💾 Lưu</button>
+        </div>
+      </div>
+
+      <!-- Lưới ảnh trong album -->
+      <div class="album-grid" id="albumGrid"></div>
+    </div>
+  </div>
 
   <!-- ======== LIGHTBOX ======== -->
   <div class="lightbox" id="lightbox" hidden>
