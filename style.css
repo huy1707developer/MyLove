@@ -428,39 +428,6 @@ button, input, textarea {
 
 /* ---------- Thanh đồng bộ ảnh ---------- */
 
-.sync-bar {
-  background: linear-gradient(135deg, #fdf4ff, #f0f9ff);
-  border-bottom: 1px solid var(--purple-200);
-}
-
-.sync-inner {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.sync-text {
-  flex: 1 1 260px;
-  font-size: 13px;
-  color: var(--ink-soft);
-  line-height: 1.6;
-}
-
-.sync-text b {
-  color: var(--pink-600);
-  font-size: 15px;
-}
-
-.sync-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .btn-sm {
   padding: 8px 14px;
   font-size: 12.5px;

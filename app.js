@@ -243,14 +243,6 @@ function bindEvents() {
     btn.title = 'Quét lại ảnh từ Cloudinary';
   });
 
-  // Export / Import danh sách ảnh
-  if ($('btnExport')) $('btnExport').addEventListener('click', exportPhotos);
-  if ($('btnImport')) $('btnImport').addEventListener('click', () => $('importFile').click());
-  if ($('importFile')) $('importFile').addEventListener('change', (e) => {
-    importPhotos(e.target.files[0]);
-    e.target.value = '';
-  });
-
   // Xem thêm
   $('btnLoadMore').addEventListener('click', () => {
     visibleCount += PAGE_SIZE;
@@ -287,6 +279,7 @@ function bindEvents() {
   $('lbPrev').addEventListener('click', () => navigateLightbox(-1));
   $('lbNext').addEventListener('click', () => navigateLightbox(1));
   $('lbDelete').addEventListener('click', deleteCurrentPhoto);
+  $('lbDownload').addEventListener('click', downloadCurrentPhoto);
   $('lightbox').addEventListener('click', (e) => {
     if (e.target === $('lightbox')) closeLightbox();
   });
@@ -591,7 +584,6 @@ async function loadPhotos() {
   renderStats();
   renderAlbumList();
   renderCloudStatus();
-  renderExportBar();
 }
 
 /**
@@ -654,78 +646,8 @@ function mergePhotos(primary, secondary) {
 }
 
 /* ==========================================================
-   EXPORT / IMPORT — đồng bộ ảnh giữa các thiết bị
+   THÔNG BÁO CLOUDINARY
    ========================================================== */
-
-/**
- * Tải danh sách ảnh về máy (file JSON).
- * Cách này dùng để đưa ảnh đã upload sang thiết bị khác,
- * hoặc dán vào data/gallery.json trên GitHub.
- */
-function exportPhotos() {
-  if (!photos.length) {
-    toast('Chưa có ảnh nào để xuất', 'error');
-    return;
-  }
-
-  const data = JSON.stringify(photos, null, 2);
-  const blob = new Blob([data], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'gallery-' + new Date().toISOString().slice(0, 10) + '.json';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-  toast('Đã xuất ' + photos.length + ' ảnh 💾', 'success');
-}
-
-/**
- * Nhập danh sách ảnh từ file JSON (do export ra hoặc copy từ gallery.json).
- */
-function importPhotos(file) {
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      const list = Array.isArray(data) ? data : (data.photos || []);
-
-      if (!list.length) {
-        toast('File không có ảnh nào', 'error');
-        return;
-      }
-
-      photos = mergePhotos(list, photos);
-      savePhotosToLocal();
-      applyFilters();
-      renderStats();
-      renderAlbumList();
-
-      toast('Đã nhập ' + list.length + ' ảnh 📥', 'success');
-    } catch (err) {
-      toast('File JSON không hợp lệ: ' + err.message, 'error');
-    }
-  };
-
-  reader.readAsText(file);
-}
-
-/**
- * Hiện thanh công cụ Export/Import khi đã có ảnh.
- */
-function renderExportBar() {
-  const bar = $('syncBar');
-  if (!bar) return;
-  bar.hidden = !photos.length;
-  $('syncCount').textContent = photos.length;
-}
 
 /**
  * Hiện cảnh báo nếu Cloudinary chưa trả về ảnh nào.
@@ -1802,6 +1724,9 @@ function openLightbox(index, onClose) {
   const dl = $('lbDownload');
   dl.href = p.url;
   dl.download = (p.filename || 'photo') + (p.note ? '_' + slugify(p.note) : '');
+  dl.setAttribute('data-photo-url', p.url);
+  dl.setAttribute('data-photo-name', dl.download);
+  dl.removeAttribute('target');
 
   $('lbShare').href = p.url;
 
@@ -1815,6 +1740,76 @@ function navigateLightbox(direction) {
   if (!filtered.length) return;
   currentIndex = (currentIndex + direction + filtered.length) % filtered.length;
   openLightbox(currentIndex, window.__lightboxOnClose);
+}
+
+/**
+ * Tải ảnh về máy.
+ *
+ * Vì sao không dùng thuộc tính `download` của <a>?
+ *   Ảnh nằm ở domain khác (res.cloudinary.com) nên trình duyệt bỏ qua
+ *   `download` → chỉ mở ảnh ra tab mới, KHÔNG tải file về.
+ *   Cách này gọi /api/download (server proxy) rồi tạo blob URL để ép tải.
+ */
+async function downloadCurrentPhoto(e) {
+  if (e) e.preventDefault();
+
+  const btn = $('lbDownload');
+  if (!btn) return;
+
+  const url = btn.getAttribute('data-photo-url') || btn.href;
+  const name = btn.getAttribute('data-photo-name') || 'photo';
+
+  if (!url) {
+    toast('Không tìm thấy ảnh để tải 😢', 'error');
+    return;
+  }
+
+  const oldText = btn.textContent;
+  btn.textContent = '⏳ Đang tải...';
+
+  try {
+    // Ưu tiên proxy server-side (tải đúng tên file + chắc chắn tải về)
+    let blob = null;
+
+    try {
+      const proxyUrl =
+        '/api/download?url=' + encodeURIComponent(url) +
+        '&name=' + encodeURIComponent(name);
+
+      const res = await fetch(proxyUrl);
+      if (res.ok) {
+        const type = res.headers.get('content-type') || '';
+        if (type.indexOf('application/json') === -1) {
+          blob = await res.blob();
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Proxy tải ảnh lỗi, thử tải trực tiếp:', err.message);
+    }
+
+    // Fallback: fetch thẳng từ Cloudinary rồi tạo object URL
+    if (!blob) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      blob = await res.blob();
+    }
+
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objUrl;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(objUrl), 15000);
+
+    toast('Đã tải ảnh về máy 💾', 'success');
+  } catch (err) {
+    console.error('Lỗi tải ảnh:', err);
+    toast('Tải ảnh lỗi rồi, thử lại nhé 😢', 'error');
+  } finally {
+    btn.textContent = oldText;
+  }
 }
 
 function closeLightbox() {
@@ -2161,7 +2156,6 @@ async function doUpload() {
   applyFilters();
   renderStats();
   renderAlbumList();
-  renderExportBar();
 
   // Nếu đang thêm vào album → mở lại album đó để user thấy ảnh mới
   if (wasAddingToAlbum) {
