@@ -514,21 +514,24 @@ function openCapsuleModal() {
   bindCapsuleModal();
 
   // Reset form
-  $('capsuleTitleInput').value = '';
-  $('capsuleMessageInput').value = '';
-  $('capsuleEmoji').value = '💌';
+  const titleInput = $('capsuleTitleInput');
+  const msgInput = $('capsuleMessageInput');
+  const dateInput = $('capsuleDateInput');
+  if (titleInput) titleInput.value = '';
+  if (msgInput) msgInput.value = '';
   capsuleEmoji = '💌';
 
   // Mac dinh: 1 nam sau ngay hien tai
   const d = new Date();
   d.setFullYear(d.getFullYear() + 1);
-  $('capsuleDateInput').value = d.toISOString().slice(0, 10);
+  if (dateInput) dateInput.value = d.toISOString().slice(0, 10);
 
   // Highlight emoji mac dinh
   document.querySelectorAll('#capsuleEmojiPicker .emoji-opt').forEach(b => {
     b.classList.toggle('active', b.getAttribute('data-emoji') === '💌');
   });
-  $('capsuleModalEmoji').textContent = '💌';
+  const headEmoji = $('capsuleModalEmoji');
+  if (headEmoji) headEmoji.textContent = '💌';
 
   updateCapsuleDateHint();
 
@@ -635,19 +638,23 @@ function updateCapsuleDateHint() {
 
 /** Luu phong bi tu pop-up */
 async function saveCapsuleFromModal() {
-  const title = $('capsuleTitleInput').value.trim();
-  const dateStr = $('capsuleDateInput').value;
-  const message = $('capsuleMessageInput').value.trim();
+  const titleEl = $('capsuleTitleInput');
+  const dateEl = $('capsuleDateInput');
+  const msgEl = $('capsuleMessageInput');
+
+  const title = titleEl ? titleEl.value.trim() : '';
+  const dateStr = dateEl ? dateEl.value : '';
+  const message = msgEl ? msgEl.value.trim() : '';
   const emoji = capsuleEmoji || '💌';
 
   if (!title) {
     toast('Phong bì cần có tiêu đề nha! 💌', 'error');
-    $('capsuleTitleInput').focus();
+    if (titleEl) titleEl.focus();
     return;
   }
   if (!dateStr) {
     toast('Chọn ngày mở phong bì nhé! 📅', 'error');
-    $('capsuleDateInput').focus();
+    if (dateEl) dateEl.focus();
     return;
   }
 
