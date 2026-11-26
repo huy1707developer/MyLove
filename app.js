@@ -1068,6 +1068,16 @@ function renderGallery() {
   const groups = groupPhotos(filtered);
 
   groups.forEach((g, gi) => {
+    // --- Hàng chứa 1 album ---
+    const row = document.createElement('div');
+    row.className = 'story-row';
+
+    // Chấm tròn trên đường nối
+    const dot = document.createElement('span');
+    dot.className = 'story-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    row.appendChild(dot);
+
     const cell = document.createElement('article');
     cell.className = 'story';
     cell.style.animationDelay = Math.min(gi * 45, 600) + 'ms';
@@ -1077,9 +1087,9 @@ function renderGallery() {
 
     // --- Khung ảnh bên trong ---
     const frames = document.createElement('div');
-    frames.className = 'story-frames';
+    frames.className = 'story-frames count-' + Math.min(g.photos.length, 3);
 
-    // Số ảnh hiển thị tối đa trong ô (giống bảng ghép 4 ô)
+    // Số ảnh hiển thị tối đa trong ô (giống bảng ghép 5 ô)
     const preview = g.photos.slice(0, 5);
 
     preview.forEach((p, i) => {
@@ -1105,13 +1115,12 @@ function renderGallery() {
       frames.appendChild(frame);
     });
 
-    // Dấu "+" nối các khung (giống ảnh mẫu)
-    if (g.photos.length > 1) {
-      const plus = document.createElement('span');
-      plus.className = 'story-plus';
-      plus.textContent = '+';
-      frames.appendChild(plus);
-    }
+    // Dấu "+" góc phải (như hình mẫu)
+    const plus = document.createElement('span');
+    plus.className = 'story-plus';
+    plus.textContent = '+';
+    plus.title = g.photos.length + ' ảnh trong album';
+    frames.appendChild(plus);
 
     cell.appendChild(frames);
 
@@ -1121,24 +1130,28 @@ function renderGallery() {
 
     const title = document.createElement('h3');
     title.className = 'story-title';
-    title.textContent = g.title || 'Khoảnh khắc của chúng mình';
+
+    const titleText = document.createElement('span');
+    titleText.textContent = g.title || 'Khoảnh khắc của chúng mình';
+    title.appendChild(titleText);
+
+    const pill = document.createElement('span');
+    pill.className = 'count-pill';
+    pill.textContent = g.photos.length + ' ảnh';
+    title.appendChild(pill);
+
     info.appendChild(title);
 
     const sub = document.createElement('div');
     sub.className = 'story-sub';
 
-    const count = document.createElement('span');
-    count.textContent = g.photos.length + ' ảnh';
-    sub.appendChild(count);
-
     if (g.date) {
-      const sep = document.createElement('span');
-      sep.className = 'dot-sep';
-      sep.textContent = '•';
-      sub.appendChild(sep);
-
       const d = document.createElement('span');
       d.textContent = formatDate(g.date);
+      sub.appendChild(d);
+    } else {
+      const d = document.createElement('span');
+      d.textContent = 'Chưa đặt ngày';
       sub.appendChild(d);
     }
 
@@ -1163,8 +1176,35 @@ function renderGallery() {
       }
     });
 
-    stories.appendChild(cell);
+    row.appendChild(cell);
+    stories.appendChild(row);
   });
+
+  // --- Hàng cuối: ô "+ Thêm album" ---
+  const addRow = document.createElement('div');
+  addRow.className = 'story-row';
+
+  const addDot = document.createElement('span');
+  addDot.className = 'story-dot';
+  addDot.setAttribute('aria-hidden', 'true');
+  addRow.appendChild(addDot);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'story-add';
+  addBtn.type = 'button';
+  addBtn.innerHTML =
+    '<span class="story-add-icon">+</span>' +
+    '<span>Thêm album mới</span>' +
+    '<small style="font-weight:400;opacity:.75">Upload ảnh → tự tạo 1 câu chuyện</small>';
+
+  addBtn.addEventListener('click', () => {
+    uploadTargetGroupId = null;
+    uploadTargetGroupTitle = '';
+    openUploadModal();
+  });
+
+  addRow.appendChild(addBtn);
+  stories.appendChild(addRow);
 }
 
 /* ==========================================================
