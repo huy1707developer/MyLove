@@ -13,6 +13,9 @@
 
 const GATE_PASS = '1605';
 
+/** Ngay chinh thuc chung ta bat dau yeu nhau (co the doi trong "Cai dat") */
+const DEFAULT_LOVE_START = '2024-05-16';
+
 const LOVE_QUESTIONS = [
   {
     question: '1. Ngày chính thức hẹn hò của hai đứa mình là ngày nào?',
@@ -20,7 +23,7 @@ const LOVE_QUESTIONS = [
     correctIndex: 1
   },
   {
-    question: '2. Tên gợi nhớ đầy yêu thương của Bé Gấu là gì?',
+    question: '2. Tên gợi nhớ đầy yêu thương của Bé Yêu là gì?',
     options: ['Thương Uyên', 'Thảo Uyên', 'Phương Uyên', 'Minh Uyên'],
     correctIndex: 0
   },
@@ -35,7 +38,7 @@ const LOVE_QUESTIONS = [
     correctIndex: 1
   },
   {
-    question: '4. Điều gì mà Bé Gấu luôn tâm đắc và để ý nhất?',
+    question: '4. Điều gì mà Bé Yêu luôn tâm đắc và để ý nhất?',
     options: [
       'Ngủ nướng vào cuối tuần',
       'Sự xinh đẹp và không được mụp',
@@ -45,7 +48,7 @@ const LOVE_QUESTIONS = [
     correctIndex: 1
   },
   {
-    question: '5. Đâu là những điều Bé Gấu thích nhất?',
+    question: '5. Đâu là những điều Bé Yêu thích nhất?',
     options: [
       'Ở nhà đọc sách và nấu ăn',
       'Đi du lịch, đi chơi, sống thoải mái tự do, sống hạnh phúc bình yên',
@@ -65,7 +68,13 @@ let gateOptionIndex = null;
  * Neu localStorage da co role -> bo qua (van co the "doi nguoi" sau).
  */
 function initGate() {
-  const saved = localStorage.getItem('love_user_role');
+  // Migration role cu -> role moi
+  const raw = localStorage.getItem('love_user_role');
+  if (raw === 'Bé Gấu' || raw === 'Be Gau') {
+    localStorage.setItem('love_user_role', 'Bé Yêu');
+  }
+
+  const saved = currentRole();
   if (saved) {
     gateRole = saved;
     const btn = document.querySelector('.role-btn[data-role="' + saved + '"]');
@@ -137,7 +146,7 @@ function verifyGate() {
   }
 
   if (gateOptionIndex !== gateQuestion.correctIndex) {
-    err.textContent = 'Chưa đúng rồi! Nghĩ kỹ về Bé Gấu xem nào';
+    err.textContent = 'Chưa đúng rồi! Nghĩ kỹ về Bé Yêu xem nào';
     err.className = 'gate-error';
     return;
   }
@@ -153,10 +162,10 @@ function verifyGate() {
   }, 700);
 }
 
-/** Doi nguoi dang nhap (Anh <-> Be Gau) */
+/** Doi nguoi dang nhap (Anh <-> Be Yeu) */
 function switchUser() {
-  const cur = localStorage.getItem('love_user_role') || 'Anh';
-  const next = cur === 'Anh' ? 'Bé Gấu' : 'Anh';
+  const cur = currentRole();
+  const next = cur === 'Anh' ? 'Bé Yêu' : 'Anh';
   localStorage.setItem('love_user_role', next);
   toast('Chào ' + next + '! 💕', 'success');
   renderRoleBadges();
@@ -164,7 +173,13 @@ function switchUser() {
 }
 
 function currentRole() {
-  return localStorage.getItem('love_user_role') || 'Anh';
+  // Migration: role cu la "Be Gau" -> "Be Yeu"
+  const raw = localStorage.getItem('love_user_role') || 'Anh';
+  if (raw === 'Bé Gấu' || raw === 'Be Gau') {
+    localStorage.setItem('love_user_role', 'Bé Yêu');
+    return 'Bé Yêu';
+  }
+  return raw;
 }
 
 /** Callback sau khi dang nhap thanh cong */
@@ -173,13 +188,14 @@ function onGatePassed() {
   renderAuthorPicker();
   startLoveCounter();
   loadSharedData();
+  bindLoveSettings();
 }
 
 /* ------------------------------------------------------------
    2. BO DEM NGAY YEU & DEM NGUOC
    ------------------------------------------------------------ */
 
-const LOVE_START = '2024-05-16';   // ngay chinh thuc yêu nhau
+const LOVE_START = DEFAULT_LOVE_START;   // ngay chinh thuc yêu nhau
 let counterTimer = null;
 
 function startLoveCounter() {
@@ -193,7 +209,7 @@ function stopLoveCounter() {
 }
 
 function tickLoveCounter() {
-  const start = new Date(LOVE_START + 'T00:00:00');
+  const start = new Date(loveStartDate() + 'T00:00:00');
   const now = new Date();
   let diff = Math.floor((now - start) / 1000);
   if (diff < 0) diff = 0;
@@ -235,7 +251,7 @@ function renderCountdown() {
   });
 
   // Moc mac dinh: 1 nam yeu, sinh nhat...
-  const base = new Date(LOVE_START + 'T00:00:00');
+  const base = new Date(loveStartDate() + 'T00:00:00');
   const thisYear = new Date(nowYear(base), base.getMonth(), base.getDate());
   const nextAnniv = thisYear > new Date() ? thisYear : new Date(nowYear(base) + 1, base.getMonth(), base.getDate());
   items.push({ label: 'Kỷ niệm 1 năm yêu nhau', date: nextAnniv, left: nextAnniv - new Date(), emoji: '💍' });
@@ -262,6 +278,97 @@ function renderCountdown() {
 function nowYear(d) { return d.getFullYear(); }
 
 /* ------------------------------------------------------------
+   2b. CAI DAT NGAY BAT DAU & LOI NOI
+   ------------------------------------------------------------ */
+
+let loveSettingsBound = false;
+
+/** Hien thi ngay + loi noi len trang */
+function renderLoveSettings() {
+  const s = (window.SHARED && window.SHARED.settings) || {};
+  const noteEl = $('loveNote');
+  if (noteEl) {
+    const note = (s.note || '').trim();
+    noteEl.textContent = note ? '“' + note + '”' : '';
+    noteEl.hidden = !note;
+  }
+
+  // Dong bo gia tri vao form (neu dang mo)
+  const dInput = $('loveStartInput');
+  if (dInput && dInput.value !== (s.startDate || DEFAULT_LOVE_START)) {
+    dInput.value = s.startDate || DEFAULT_LOVE_START;
+  }
+  const nInput = $('loveNoteInput');
+  if (nInput && document.activeElement !== nInput) {
+    nInput.value = s.note || '';
+  }
+}
+
+/** Gan su kien cho nut cai dat + form (chi 1 lan) */
+function bindLoveSettings() {
+  if (loveSettingsBound) return;
+  loveSettingsBound = true;
+
+  const btn = $('btnLoveSettings');
+  const modal = $('loveSettingsModal');
+  const closeBtn = $('loveSettingsClose');
+  const cancelBtn = $('btnCancelLoveSettings');
+  const saveBtn = $('btnSaveLoveSettings');
+
+  if (btn && modal) {
+    btn.addEventListener('click', () => {
+      renderLoveSettings();
+      modal.hidden = false;
+      document.body.classList.add('modal-open');
+    });
+  }
+
+  const close = () => {
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('modal-open');
+  };
+
+  if (closeBtn) closeBtn.addEventListener('click', close);
+  if (cancelBtn) cancelBtn.addEventListener('click', close);
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target.hasAttribute('data-close')) close();
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const dateVal = $('loveStartInput').value;
+      const noteVal = $('loveNoteInput').value.trim();
+
+      if (!dateVal) {
+        toast('Hãy chọn ngày chúng mình bắt đầu nhé!', 'error');
+        return;
+      }
+
+      window.SHARED.settings = Object.assign({}, window.SHARED.settings, {
+        startDate: dateVal,
+        note: noteVal
+      });
+
+      saveBtn.disabled = true;
+      const ok = await saveSharedData();
+      saveBtn.disabled = false;
+
+      if (ok) {
+        renderLoveSettings();
+        tickLoveCounter();
+        renderCountdown();
+        close();
+        toast('Đã lưu cài đặt tình yêu 💕', 'success');
+      }
+    });
+  }
+}
+
+/* ------------------------------------------------------------
    3. DU LIEU DUNG CHUNG (Cloudinary raw JSON)
    ------------------------------------------------------------ */
 
@@ -269,8 +376,18 @@ window.SHARED = {
   capsules: [],
   reactions: {},
   music: '',
-  milestones: []
+  milestones: [],
+  settings: {
+    startDate: '2024-05-16',
+    note: ''
+  }
 };
+
+/** Ngay bat dau: uu tien setting trong shared, fallback gia tri mac dinh */
+function loveStartDate() {
+  const s = (window.SHARED && window.SHARED.settings) || {};
+  return s.startDate || DEFAULT_LOVE_START;
+}
 
 async function loadSharedData() {
   try {
@@ -283,13 +400,17 @@ async function loadSharedData() {
     window.SHARED.reactions = d.reactions || {};
     window.SHARED.music = d.music || '';
     window.SHARED.milestones = d.milestones || [];
+    window.SHARED.settings = Object.assign(
+      { startDate: DEFAULT_LOVE_START, note: '' },
+      d.settings || {}
+    );
 
     renderCapsules();
     renderCountdown();
     renderReactions();
+    renderLoveSettings();
     if (window.SHARED.music) {
-      const a = $('bgMusic');
-      if (a) a.src = window.SHARED.music;
+      setBackgroundMusic(window.SHARED.music);
     }
   } catch (err) {
     console.warn('Không đọc được dữ liệu chung:', err.message);
@@ -306,7 +427,11 @@ async function saveSharedData() {
           capsules: window.SHARED.capsules,
           reactions: window.SHARED.reactions,
           music: window.SHARED.music,
-          milestones: window.SHARED.milestones
+          milestones: window.SHARED.milestones,
+          settings: window.SHARED.settings || {
+            startDate: DEFAULT_LOVE_START,
+            note: ''
+          }
         }
       })
     });
@@ -479,86 +604,249 @@ function renderPlaces() {
    7. NHAC KY NIEM
    ------------------------------------------------------------ */
 
+let ytPlayer = null;        // instance cua YT.Player
+let ytReady = false;        // da san sang chua
+let ytPending = null;       // video id cho san
+let ytIsPlaying = false;    // trang thai phat
+let currentTrackUrl = '';   // link hien tai
+
 function bindMusic() {
   const disc = $('musicDisc');
   const audio = $('bgMusic');
   if (!disc || !audio) return;
 
   disc.addEventListener('click', () => {
-    if (!audio.src) {
+    if (!currentTrackUrl) {
       toast('Chưa có bài hát nào. Hãy thêm link YouTube ở album nhé!', 'error');
       return;
     }
-    if (audio.paused) {
-      audio.play().then(() => disc.classList.add('playing'))
-                   .catch(() => toast('Không phát được nhạc', 'error'));
-    } else {
-      audio.pause();
-      disc.classList.remove('playing');
-    }
+    togglePlay();
   });
 
-  audio.addEventListener('pause', () => disc.classList.remove('playing'));
+  audio.addEventListener('play', () => {
+    disc.classList.add('playing');
+    ytIsPlaying = true;
+  });
+  audio.addEventListener('pause', () => {
+    if (isYouTube(currentTrackUrl)) return;
+    disc.classList.remove('playing');
+    ytIsPlaying = false;
+  });
   audio.addEventListener('ended', () => disc.classList.remove('playing'));
 }
 
-/**
- * Phat nhac gan voi 1 album.
- * YouTube khong phat duoc truc tiep qua <audio> → dung thu vien ngoai
- * (chi tiet o ham youtubeToStream).
- */
-function playAlbumMusic(url) {
-  if (!url) return;
-
-  const audio = $('bgMusic');
+/** Bat/tay nhac theo trang thai hien tai */
+function togglePlay() {
   const disc = $('musicDisc');
+  const audio = $('bgMusic');
 
-  const stream = youtubeToStream(url);
-
-  if (!stream) {
-    // Khong phai YouTube → thử phat trực tiếp (mp3, dropbox...)
-    if (audio) {
-      audio.src = url;
-      audio.play().then(() => { if (disc) disc.classList.add('playing'); })
-                  .catch(() => toast('Không phát được link này', 'error'));
+  // Truong hop la YouTube
+  if (isYouTube(currentTrackUrl)) {
+    if (!ytReady) { toast('Đang tải trình phát nhạc...', 'info'); return; }
+    if (ytIsPlaying) {
+      ytPlayer.pauseVideo();
+      ytIsPlaying = false;
+      if (disc) disc.classList.remove('playing');
+    } else {
+      try {
+        ytPlayer.playVideo();
+        ytIsPlaying = true;
+        if (disc) disc.classList.add('playing');
+      } catch (err) {
+        toast('Không phát được nhạc: ' + err.message, 'error');
+      }
     }
     return;
   }
 
-  if (audio) {
-    audio.src = stream;
-    audio.play().then(() => { if (disc) disc.classList.add('playing'); })
-                .catch(() => toast('Không phát được nhạc', 'error'));
+  // Truong hop la file audio thuong
+  if (!audio || !audio.src) {
+    toast('Chưa có bài hát nào. Hãy thêm link YouTube ở album nhé!', 'error');
+    return;
+  }
+  if (audio.paused) {
+    audio.play()
+      .then(() => { if (disc) disc.classList.add('playing'); })
+      .catch(() => toast('Không phát được nhạc. Thử mở nhạc từ album khác nhé!', 'error'));
+  } else {
+    audio.pause();
+    if (disc) disc.classList.remove('playing');
   }
 }
 
 /**
- * Chuyen link YouTube thanh stream audio.
- * - youtu.be/ID  → https://www.youtube.com/embed/ID
- * - watch?v=ID   → https://www.youtube.com/embed/ID
- * Neu trinh duyet khong cho phep, nguoi dung dung nut disc de thu lai.
+ * Phat nhac gan voi 1 album (YouTube / mp3 / dropbox...).
+ * YouTube duoc phat qua IFrame Player API (xem createYouTubePlayer).
  */
-function youtubeToStream(url) {
+function playAlbumMusic(url) {
+  if (!url) return;
+  currentTrackUrl = url;
+
+  const audio = $('bgMusic');
+  const disc = $('musicDisc');
+
+  if (isYouTube(url)) {
+    // Tat audio neu dang phat file thuong
+    if (audio) { audio.pause(); audio.removeAttribute('src'); }
+
+    const id = youtubeId(url);
+    if (!id) { toast('Không tìm thấy video trong link này', 'error'); return; }
+
+    if (!ytReady) {
+      ytPending = id;
+      loadYouTubeApi();
+      return;
+    }
+    ytPlayer.cueVideoById({ videoId: id, startSeconds: 0 });
+    ytPlayer.playVideo();
+    ytIsPlaying = true;
+    if (disc) disc.classList.add('playing');
+    toast('🎵 Đang phát nhạc kỷ niệm', 'success');
+    return;
+  }
+
+  // Khong phai YouTube -> phat truc tiep (mp3, dropbox...)
+  if (audio) {
+    audio.src = url;
+    audio.play()
+      .then(() => {
+        if (disc) disc.classList.add('playing');
+        toast('🎵 Đang phát nhạc kỷ niệm', 'success');
+      })
+      .catch(() => toast('Không phát được link này', 'error'));
+  }
+}
+
+/** Nhac nen mac dinh */
+function setBackgroundMusic(url) {
+  currentTrackUrl = url || '';
+  const audio = $('bgMusic');
+  if (audio && url) {
+    audio.src = url;
+    audio.loop = true;
+  }
+}
+
+/** Link co phai YouTube khong? */
+function isYouTube(url) {
+  if (!url) return false;
+  const s = String(url).toLowerCase();
+  return s.indexOf('youtube.com') !== -1 ||
+         s.indexOf('youtu.be') !== -1 ||
+         s.indexOf('youtube-nocookie.com') !== -1;
+}
+
+/**
+ * Chuyen link YouTube thanh video id.
+ * - youtu.be/ID  -> ID
+ * - watch?v=ID   -> ID
+ * - /embed/ID    -> ID
+ * - /shorts/ID   -> ID
+ */
+function youtubeId(url) {
   if (!url) return '';
   const s = String(url);
 
-  let id = '';
-  const short = s.match(/youtu\.be\/([\w-]{6,})/);
-  const watch = s.match(/[?&]v=([\w-]{6,})/);
-  const embed = s.match(/\/embed\/([\w-]{6,})/);
+  const patterns = [
+    /youtu\.be\/([\w-]{6,})/,
+    /[?&]v=([\w-]{6,})/,
+    /\/embed\/([\w-]{6,})/,
+    /\/shorts\/([\w-]{6,})/,
+    /\/live\/([\w-]{6,})/
+  ];
 
-  if (short) id = short[1];
-  else if (watch) id = watch[1];
-  else if (embed) id = embed[1];
+  for (let i = 0; i < patterns.length; i++) {
+    const m = s.match(patterns[i]);
+    if (m) return m[1];
+  }
+  return '';
+}
 
-  if (!id) return '';
+/* --- YouTube IFrame Player API --- */
 
-  // Nhac nen -> dung AudioTube (doc stream audio)
-  return 'https://audiotube.net/embed/' + id + '/';
+let ytApiLoading = false;
+
+/** Nap YouTube IFrame Player API (1 lan duy nhat) */
+function loadYouTubeApi() {
+  if (window.YT && window.YT.Player) { createYouTubePlayer(); return; }
+  if (ytApiLoading) return;
+  ytApiLoading = true;
+
+  const tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  tag.onerror = () => {
+    ytApiLoading = false;
+    toast('Không tải được trình phát YouTube', 'error');
+  };
+  document.head.appendChild(tag);
+}
+
+/** Callback toan cuc cua YouTube API */
+window.onYouTubeIframeAPIReady = function () {
+  ytApiLoading = false;
+  createYouTubePlayer();
+};
+
+function createYouTubePlayer() {
+  if (ytPlayer || !window.YT || !window.YT.Player) return;
+
+  const holder = $('ytPlayer');
+  if (!holder) return;
+
+  const vid = ytPending || '';
+
+  try {
+    ytPlayer = new window.YT.Player('ytPlayer', {
+      height: '1',
+      width: '1',
+      videoId: vid,
+      playerVars: {
+        autoplay: 1,
+        loop: 1,
+        playlist: vid,
+        playsinline: 1,
+        controls: 0,
+        disablekb: 1,
+        rel: 0
+      },
+      events: {
+        onReady: (e) => {
+          ytReady = true;
+          if (vid) {
+            try {
+              e.target.playVideo();
+              ytIsPlaying = true;
+              const disc = $('musicDisc');
+              if (disc) disc.classList.add('playing');
+            } catch (err) { /* ignore */ }
+          }
+        },
+        onStateChange: (e) => {
+          const disc = $('musicDisc');
+          if (e.data === window.YT.PlayerState.PLAYING) {
+            ytIsPlaying = true;
+            if (disc) disc.classList.add('playing');
+          } else if (e.data === window.YT.PlayerState.PAUSED ||
+                     e.data === window.YT.PlayerState.ENDED) {
+            ytIsPlaying = false;
+            if (disc) disc.classList.remove('playing');
+          }
+        },
+        onError: (e) => {
+          ytIsPlaying = false;
+          const disc = $('musicDisc');
+          if (disc) disc.classList.remove('playing');
+          toast('Không phát được video này (mã ' + e.data + ')', 'error');
+        }
+      }
+    });
+  } catch (err) {
+    console.error('Lỗi tạo YouTube player:', err);
+  }
 }
 
 /* ------------------------------------------------------------
-   8. HUY HIU NGUOI DANG (Anh / Be Gau)
+   8. HUY HIU NGUOI DANG (Anh / Be Yeu)
    ------------------------------------------------------------ */
 
 function renderRoleBadges() {

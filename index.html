@@ -21,16 +21,16 @@
       <div class="gate-hearts" aria-hidden="true"></div>
 
       <h2 class="gate-title">Thế Giới Của Hai Đứa</h2>
-      <p class="gate-sub">Chỉ dành riêng cho Anh và Bé Gấu Thương Uyên</p>
+      <p class="gate-sub">Chỉ dành riêng cho Anh và Bé Yêu Thương Uyên</p>
 
       <div class="role-selector" id="gateRoles">
         <button type="button" class="role-btn active" data-role="Anh">
           <span class="role-emoji">&#128102;</span>
           Anh Yêu
         </button>
-        <button type="button" class="role-btn" data-role="Bé Gấu">
+        <button type="button" class="role-btn" data-role="Bé Yêu">
           <span class="role-emoji">&#128059;</span>
-          Bé Gấu
+          Bé Yêu
         </button>
       </div>
 
@@ -106,7 +106,14 @@
           <div class="cu"><span class="cu-num" id="cdSecs">00</span><span class="cu-lab">giây</span></div>
         </div>
         <div class="countdown-row" id="countdownRow"></div>
+
+        <button class="counter-settings" id="btnLoveSettings" type="button" title="Cài đặt ngày & lời nói">
+          ⚙️ Cài đặt
+        </button>
       </div>
+
+      <!-- LỜI NÓI CỦA HAI ĐỨA -->
+      <p class="love-note" id="loveNote" hidden></p>
     </div>
   </header>
 
@@ -200,7 +207,10 @@
     <span class="music-disc-core"></span>
     <span class="music-disc-label">&#9835;</span>
   </button>
-  <audio id="bgMusic" loop preload="none"></audio>
+  <audio id="bgMusic" loop preload="none" crossorigin="anonymous"></audio>
+
+  <!-- YouTube IFrame Player (ẩn) để phát nhạc kỷ niệm -->
+  <div id="ytPlayer" class="yt-player-hidden"></div>
 
   <div class="album-view" id="albumView" hidden>
     <div class="album-backdrop" data-close-album></div>
@@ -308,6 +318,33 @@
     </figure>
   </div>
 
+  <!-- ======== MODAL CAI DAT TINH YEU ======== -->
+  <div class="modal" id="loveSettingsModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card">
+      <button class="modal-close" id="loveSettingsClose" aria-label="Đóng">
+        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+
+      <h2 class="modal-title">Cài đặt tình yêu 💕</h2>
+
+      <label class="field field-wide">
+        <span class="field-label">Ngày chúng mình bắt đầu</span>
+        <input type="date" id="loveStartInput" value="2024-05-16">
+      </label>
+
+      <label class="field field-wide">
+        <span class="field-label">Lời nói của chúng mình</span>
+        <textarea id="loveNoteInput" rows="4" placeholder="Viết một câu thương nhớ cho hai đứa mình..."></textarea>
+      </label>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btnCancelLoveSettings" type="button">Hủy</button>
+        <button class="btn btn-primary" id="btnSaveLoveSettings" type="button">💾 Lưu</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ======== MODAL THÊM ẢNH ======== -->
   <div class="modal" id="uploadModal" hidden>
     <div class="modal-backdrop" data-close></div>
@@ -360,7 +397,7 @@
           <span class="field-label">Người đăng</span>
           <div class="author-picker" id="authorPicker">
             <button type="button" class="author-btn active" data-author="Anh">👦 Anh đăng</button>
-            <button type="button" class="author-btn" data-author="Bé Gấu">🐻 Bé Gấu đăng</button>
+            <button type="button" class="author-btn" data-author="Bé Yêu">🐻 Bé Yêu đăng</button>
           </div>
         </label>
 
@@ -418,7 +455,7 @@
     <p class="footer-sub" id="footerSub"></p>
   </footer>
 
-  <script src="features.js?v=3"></script>
-  <script src="app.js?v=4"></script>
+  <script src="features.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

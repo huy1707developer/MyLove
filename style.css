@@ -2048,6 +2048,54 @@ button, input, textarea {
 
 .cd-text b { color: var(--pink-600); }
 
+/* ======== NUT CAI DAT + LOI NOI ======== */
+.counter-settings {
+  margin-top: 14px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px dashed var(--pink-300);
+  background: rgba(255, 255, 255, .7);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pink-500);
+  cursor: pointer;
+  transition: .2s;
+}
+
+.counter-settings:hover {
+  background: #fff;
+  border-color: var(--pink-400);
+  color: var(--pink-600);
+  transform: translateY(-1px);
+}
+
+.love-note {
+  max-width: 620px;
+  margin: 14px auto 0;
+  padding: 12px 18px;
+  border-left: 3px solid var(--pink-300);
+  background: rgba(255, 255, 255, .55);
+  border-radius: 0 14px 14px 0;
+  font-family: var(--font-script);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--rose);
+  text-align: left;
+}
+
+/* ======== YOUTUBE PLAYER AN ======== */
+.yt-player-hidden {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ======== HOP THOI GIAN ======== */
 .capsule-section,
 .places-section {
