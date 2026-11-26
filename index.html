@@ -366,6 +366,63 @@
     </div>
   </div>
 
+  <!-- ======== MODAL THÊM PHONG BÌ (TIME CAPSULE) ======== -->
+  <div class="modal" id="capsuleModal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card modal-card-capsule">
+      <button class="modal-close" id="capsuleClose" aria-label="Đóng">
+        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+
+      <div class="capsule-modal-head">
+        <div class="capsule-modal-emoji" id="capsuleModalEmoji">💌</div>
+        <h2 class="modal-title">Gửi một phong bì tương lai 💌</h2>
+        <p class="capsule-modal-sub">
+          Viết một lời nhắn thương nhớ, chọn ngày mở —
+          hai đứa mình sẽ cùng mở ra đọc nhé!
+        </p>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Biểu tượng phong bì</span>
+        <div class="emoji-picker" id="capsuleEmojiPicker">
+          <button type="button" class="emoji-opt active" data-emoji="💌">💌</button>
+          <button type="button" class="emoji-opt" data-emoji="🔒">🔒</button>
+          <button type="button" class="emoji-opt" data-emoji="🎁">🎁</button>
+          <button type="button" class="emoji-opt" data-emoji="💌">💗</button>
+          <button type="button" class="emoji-opt" data-emoji="🌸">🌸</button>
+          <button type="button" class="emoji-opt" data-emoji="💍">💍</button>
+          <button type="button" class="emoji-opt" data-emoji="📜">📜</button>
+          <button type="button" class="emoji-opt" data-emoji="🕰️">🕰️</button>
+        </div>
+      </div>
+
+      <label class="field field-wide">
+        <span class="field-label">Tiêu đề phong bì</span>
+        <input type="text" id="capsuleTitleInput" maxlength="60"
+               placeholder="VD: Mở khi hai đứa giận nhau">
+      </label>
+
+      <label class="field field-wide">
+        <span class="field-label">Mở khi ngày nào?</span>
+        <input type="date" id="capsuleDateInput">
+        <span class="field-hint" id="capsuleDateHint"></span>
+      </label>
+
+      <label class="field field-wide">
+        <span class="field-label">Lời nhắn bên trong</span>
+        <textarea id="capsuleMessageInput" rows="5" maxlength="500"
+                  placeholder="Anh ơi, khi đọc được dòng này thì... 💕"></textarea>
+        <span class="field-hint">Có thể để trống nếu muốn giữ bí mật 💭</span>
+      </label>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btnCancelCapsule" type="button">Hủy</button>
+        <button class="btn btn-primary" id="btnSaveCapsule" type="button">💌 Gửi phong bì</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ======== MODAL THÊM ẢNH ======== -->
   <div class="modal" id="uploadModal" hidden>
     <div class="modal-backdrop" data-close></div>
@@ -481,7 +538,7 @@
     <p class="footer-sub" id="footerSub"></p>
   </footer>
 
-  <script src="features.js?v=8"></script>
-  <script src="app.js?v=9"></script>
+  <script src="features.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

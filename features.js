@@ -497,18 +497,162 @@ function renderCapsules() {
   });
 }
 
-/** Them phong bi moi */
+/** Them phong bi moi — mo pop-up form dep */
 function addCapsule() {
-  const title = prompt('Tiêu đề phong bì (VD: "Mở khi hai đứa giận nhau"):');
-  if (!title) return;
+  openCapsuleModal();
+}
 
-  const dateStr = prompt('Mở khi ngày nào? (YYYY-MM-DD)', '2027-05-16');
-  if (!dateStr) return;
+/* --- Pop-up them phong bi --- */
 
-  const message = prompt('Lời nhắn bên trong (có thể để trống):', '');
-  if (message === null) return;
+let capsuleModalBound = false;
+let capsuleEmoji = '💌';
 
-  const emoji = prompt('Biểu tượng (VD: 💌 🔒 🎁):', '💌') || '💌';
+function openCapsuleModal() {
+  const modal = $('capsuleModal');
+  if (!modal) { addCapsuleLegacy(); return; }
+
+  bindCapsuleModal();
+
+  // Reset form
+  $('capsuleTitleInput').value = '';
+  $('capsuleMessageInput').value = '';
+  $('capsuleEmoji').value = '💌';
+  capsuleEmoji = '💌';
+
+  // Mac dinh: 1 nam sau ngay hien tai
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  $('capsuleDateInput').value = d.toISOString().slice(0, 10);
+
+  // Highlight emoji mac dinh
+  document.querySelectorAll('#capsuleEmojiPicker .emoji-opt').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-emoji') === '💌');
+  });
+  $('capsuleModalEmoji').textContent = '💌';
+
+  updateCapsuleDateHint();
+
+  modal.hidden = false;
+  document.body.classList.add('modal-open');
+
+  setTimeout(() => {
+    const t = $('capsuleTitleInput');
+    if (t) t.focus();
+  }, 120);
+}
+
+function closeCapsuleModal() {
+  const modal = $('capsuleModal');
+  if (!modal) return;
+  modal.hidden = true;
+  document.body.classList.remove('modal-open');
+}
+
+function bindCapsuleModal() {
+  if (capsuleModalBound) return;
+  capsuleModalBound = true;
+
+  const modal = $('capsuleModal');
+  const closeBtn = $('capsuleClose');
+  const cancelBtn = $('btnCancelCapsule');
+  const saveBtn = $('btnSaveCapsule');
+
+  if (closeBtn) closeBtn.addEventListener('click', closeCapsuleModal);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeCapsuleModal);
+
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target.hasAttribute('data-close')) closeCapsuleModal();
+    });
+  }
+
+  // Chon emoji
+  document.querySelectorAll('#capsuleEmojiPicker .emoji-opt').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#capsuleEmojiPicker .emoji-opt')
+        .forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      capsuleEmoji = b.getAttribute('data-emoji') || '💌';
+      const head = $('capsuleModalEmoji');
+      if (head) head.textContent = capsuleEmoji;
+    });
+  });
+
+  // Canh bao ngay mo
+  const dateInput = $('capsuleDateInput');
+  if (dateInput) dateInput.addEventListener('change', updateCapsuleDateHint);
+
+  // Luu
+  if (saveBtn) saveBtn.addEventListener('click', saveCapsuleFromModal);
+
+  // Enter de luu
+  const titleInput = $('capsuleTitleInput');
+  if (titleInput) {
+    titleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveCapsuleFromModal();
+      }
+    });
+  }
+}
+
+/** Hien thi so ngay con lai */
+function updateCapsuleDateHint() {
+  const hint = $('capsuleDateHint');
+  const dateInput = $('capsuleDateInput');
+  if (!hint || !dateInput) return;
+
+  const val = dateInput.value;
+  if (!val) {
+    hint.textContent = 'Chọn ngày để phong bì tự mở 💌';
+    hint.className = 'field-hint';
+    return;
+  }
+
+  const d = new Date(val + 'T00:00:00');
+  if (isNaN(d)) {
+    hint.textContent = '';
+    hint.className = 'field-hint';
+    return;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((d - today) / 86400000);
+
+  if (days < 0) {
+    hint.textContent = 'Ngày này đã qua — phong bì sẽ mở ngay lập tức.';
+    hint.className = 'field-hint warn';
+  } else if (days === 0) {
+    hint.textContent = 'Mở ngay hôm nay! Phong bì sẽ bung ra luôn 💝';
+    hint.className = 'field-hint warn';
+  } else {
+    hint.textContent = 'Còn ' + days + ' ngày nữa hai đứa mình mới được mở 💕';
+    hint.className = 'field-hint';
+  }
+}
+
+/** Luu phong bi tu pop-up */
+async function saveCapsuleFromModal() {
+  const title = $('capsuleTitleInput').value.trim();
+  const dateStr = $('capsuleDateInput').value;
+  const message = $('capsuleMessageInput').value.trim();
+  const emoji = capsuleEmoji || '💌';
+
+  if (!title) {
+    toast('Phong bì cần có tiêu đề nha! 💌', 'error');
+    $('capsuleTitleInput').focus();
+    return;
+  }
+  if (!dateStr) {
+    toast('Chọn ngày mở phong bì nhé! 📅', 'error');
+    $('capsuleDateInput').focus();
+    return;
+  }
+
+  const btn = $('btnSaveCapsule');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
 
   window.SHARED.capsules.push({
     id: 'cap_' + Date.now(),
@@ -516,6 +660,34 @@ function addCapsule() {
     openDate: dateStr,
     message: message,
     emoji: emoji,
+    createdAt: new Date().toISOString()
+  });
+
+  const ok = await saveSharedData();
+
+  if (btn) { btn.disabled = false; btn.textContent = '💌 Gửi phong bì'; }
+
+  if (ok) {
+    renderCapsules();
+    closeCapsuleModal();
+    toast('Đã gửi phong bì tương lai 💌', 'success');
+  }
+}
+
+/** Fallback neu khong co modal (tranh truong hop HTML bi thieu) */
+function addCapsuleLegacy() {
+  const title = prompt('Tiêu đề phong bì:');
+  if (!title) return;
+  const dateStr = prompt('Mở khi ngày nào? (YYYY-MM-DD)', '2027-05-16');
+  if (!dateStr) return;
+  const message = prompt('Lời nhắn bên trong:', '');
+
+  window.SHARED.capsules.push({
+    id: 'cap_' + Date.now(),
+    title: title,
+    openDate: dateStr,
+    message: message || '',
+    emoji: '💌',
     createdAt: new Date().toISOString()
   });
 
