@@ -298,6 +298,9 @@ function bindEvents() {
   // ======== Tính năng mở rộng =====
   bindGate();
 
+  // Bộ chọn ngày tiếng Việt (thay <input type="date">)
+  initDatePickers();
+
   // Đổi người đang đăng nhập
   if ($('btnSwitchUser')) $('btnSwitchUser').addEventListener('click', switchUser);
 
@@ -1365,6 +1368,8 @@ function openAlbum(groupId) {
   // Điền sẵn form sửa
   $('albumEditName').value = g.title || '';
   $('albumEditDate').value = g.date || '';
+  const albumPk = window.__vnPickers && window.__vnPickers['albumEditDate'];
+  if (albumPk) albumPk.setValue(g.date || '');
   $('albumEditNote').value = g.note || '';
   if ($('albumEditPlace')) $('albumEditPlace').value = g.place || '';
   if ($('albumEditMusic')) $('albumEditMusic').value = g.music || '';
@@ -1739,6 +1744,44 @@ function openLightbox(index, onClose) {
   $('lbNext').hidden = !multi;
 }
 
+/**
+ * Khởi tạo bộ chọn ngày tiếng Việt cho mọi ô nhập ngày.
+ * Input gốc được giữ lại (type=hidden) để code cũ đọc .value như bình thường.
+ */
+function initDatePickers() {
+  if (!window.VNDatePicker) return;
+
+  window.__vnPickers = {};
+
+  window.initVNDatePickers({
+    loveStartInput: {
+      placeholder: 'Chọn ngày chúng mình bắt đầu',
+      onChange: function () {
+        // Cập nhật ngay bộ đếm tình yêu
+        if (typeof renderCountdown === 'function') renderCountdown();
+      }
+    },
+    dateInput: {
+      placeholder: 'Chọn ngày chụp',
+      onChange: function () { /* form upload — dùng khi bấm Lưu */ }
+    },
+    albumEditDate: {
+      placeholder: 'Chọn ngày chụp',
+      onChange: function () { /* form sửa album */ }
+    },
+    capsuleDateInput: {
+      placeholder: 'Chọn ngày (không bắt buộc)',
+      onChange: function () {
+        if (typeof updateCapsuleDateHint === 'function') updateCapsuleDateHint();
+      }
+    },
+    reminderDateInput: {
+      placeholder: 'Chọn ngày (không bắt buộc)',
+      onChange: function () { /* lời nhắc nhở */ }
+    }
+  });
+}
+
 function navigateLightbox(direction) {
   if (!filtered.length) return;
   currentIndex = (currentIndex + direction + filtered.length) % filtered.length;
@@ -1988,6 +2031,8 @@ function openUploadModal() {
   $('uploadForm').hidden = true;
   $('noteInput').value = '';
   $('dateInput').value = new Date().toISOString().slice(0, 10);
+  const upPk = window.__vnPickers && window.__vnPickers['dateInput'];
+  if (upPk) upPk.setValue($('dateInput').value);
   $('albumInput').value = currentAlbum !== 'all' ? currentAlbum : '';
   if ($('placeInput')) $('placeInput').value = '';
   if ($('musicInput')) $('musicInput').value = '';

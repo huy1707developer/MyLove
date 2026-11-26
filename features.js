@@ -324,8 +324,12 @@ function renderLoveSettings() {
 
   // Dong bo gia tri vao form (neu dang mo)
   const dInput = $('loveStartInput');
-  if (dInput && dInput.value !== (s.startDate || DEFAULT_LOVE_START)) {
-    dInput.value = s.startDate || DEFAULT_LOVE_START;
+  const wantDate = s.startDate || DEFAULT_LOVE_START;
+  if (dInput && dInput.value !== wantDate) {
+    dInput.value = wantDate;
+    // Dong bo hien thi cua bo chon ngay
+    const pk = window.__vnPickers && window.__vnPickers['loveStartInput'];
+    if (pk) pk.setValue(wantDate);
   }
   const nInput = $('loveNoteInput');
   if (nInput && document.activeElement !== nInput) {
@@ -599,6 +603,8 @@ function openCapsuleModal(editItem) {
     if (titleInput) titleInput.value = editItem.title || '';
     if (msgInput) msgInput.value = editItem.message || '';
     if (dateInput) dateInput.value = editItem.openDate || '';
+    const capPk = window.__vnPickers && window.__vnPickers['capsuleDateInput'];
+    if (capPk) capPk.setValue(editItem.openDate || '');
     capsuleEmoji = editItem.emoji || '💌';
 
     if (modalTitle) modalTitle.textContent = 'Sửa phong bì 💌';
@@ -610,6 +616,8 @@ function openCapsuleModal(editItem) {
     if (titleInput) titleInput.value = '';
     if (msgInput) msgInput.value = '';
     if (dateInput) dateInput.value = '';
+    const capPk = window.__vnPickers && window.__vnPickers['capsuleDateInput'];
+    if (capPk) capPk.setValue('');
     capsuleEmoji = '💌';
 
     if (modalTitle) modalTitle.textContent = 'Một kỷ niệm trong phong bì 💌';
@@ -839,6 +847,8 @@ function openReminderModal(editItem) {
     if (titleInput) titleInput.value = editItem.title || '';
     if (textInput) textInput.value = editItem.text || '';
     if (dateInput) dateInput.value = editItem.date || '';
+    const remPk = window.__vnPickers && window.__vnPickers['reminderDateInput'];
+    if (remPk) remPk.setValue(editItem.date || '');
     reminderEmoji = editItem.emoji || '📌';
 
     if (modalTitle) modalTitle.textContent = 'Sửa lời nhắc 📌';
@@ -849,6 +859,8 @@ function openReminderModal(editItem) {
     if (titleInput) titleInput.value = '';
     if (textInput) textInput.value = '';
     if (dateInput) dateInput.value = '';
+    const remPk = window.__vnPickers && window.__vnPickers['reminderDateInput'];
+    if (remPk) remPk.setValue('');
     reminderEmoji = '📌';
 
     if (modalTitle) modalTitle.textContent = 'Ghi chú cho nhau 📌';
