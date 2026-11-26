@@ -208,21 +208,43 @@
       var vh = window.innerHeight;
       var vw = window.innerWidth;
 
+      // Find the clipping container (modal card) to constrain popup
+      var bounds = { top: 8, bottom: vh - 8, left: 8, right: vw - 8 };
+      var clipEl = wrap.parentElement;
+      while (clipEl && clipEl !== document.body) {
+        var cs = getComputedStyle(clipEl);
+        if (cs.overflow !== 'visible' || cs.overflowY !== 'visible' || cs.overflowX !== 'visible') {
+          var cr = clipEl.getBoundingClientRect();
+          bounds.top = Math.max(bounds.top, cr.top + 6);
+          bounds.bottom = Math.min(bounds.bottom, cr.bottom - 6);
+          bounds.left = Math.max(bounds.left, cr.left + 6);
+          bounds.right = Math.min(bounds.right, cr.right - 6);
+          break;
+        }
+        clipEl = clipEl.parentElement;
+      }
+
       var left = r.left;
-      // Căn phải nếu sát mép phải màn hình
-      if (left + pw > vw - 12) left = Math.max(12, r.right - pw);
+      if (left + pw > bounds.right) left = bounds.right - pw;
+      if (left < bounds.left) left = bounds.left;
 
       var top = r.bottom + 6;
-      // Nếu không đủ chỗ bên dưới → mở lên trên
-      if (top + ph > vh - 12) {
-        top = Math.max(12, r.top - ph - 6);
+      // Not enough room below -> open upward
+      if (top + ph > bounds.bottom) {
+        var above = r.top - ph - 6;
+        if (above >= bounds.top) {
+          top = above;
+        } else {
+          // No room either way -> clamp inside bounds
+          top = Math.max(bounds.top, bounds.bottom - ph);
+        }
       }
 
       popup.style.left = Math.round(left) + 'px';
       popup.style.top = Math.round(top) + 'px';
     }
 
-    /** Có phải popup đang bị ancestor cắt không? */
+    // Check whether popup is clipped by an ancestor
     function isClipped() {
       var el = wrap.parentElement;
       while (el && el !== document.body) {
