@@ -15,6 +15,40 @@
 </head>
 <body>
 
+  <!-- ======== CANH CONG KY NIEM (dang nhap) ======== -->
+  <div id="loveGate" class="love-gate" hidden>
+    <div class="gate-card">
+      <div class="gate-hearts" aria-hidden="true"></div>
+
+      <h2 class="gate-title">Thế Giới Của Hai Đứa</h2>
+      <p class="gate-sub">Chỉ dành riêng cho Anh và Bé Gấu Thương Uyên</p>
+
+      <div class="role-selector" id="gateRoles">
+        <button type="button" class="role-btn active" data-role="Anh">
+          <span class="role-emoji">&#128187;</span>
+          Anh Yêu
+        </button>
+        <button type="button" class="role-btn" data-role="Bé Gấu">
+          <span class="role-emoji">&#128059;</span>
+          Bé Gấu
+        </button>
+      </div>
+
+      <label class="gate-field">
+        <span class="gate-label">Mật mã bí mật của chúng mình</span>
+        <input type="password" id="gatePassword" class="gate-input" placeholder="Nhập mật mã..." autocomplete="off">
+      </label>
+
+      <div class="quiz-box">
+        <p class="quiz-question" id="gateQuestion">Đang tải câu hỏi kỷ niệm...</p>
+        <div class="quiz-options" id="gateOptions"></div>
+      </div>
+
+      <button type="button" class="gate-submit" id="gateSubmit">Mở Khóa Kỷ Niệm</button>
+      <p class="gate-error" id="gateError"></p>
+    </div>
+  </div>
+
   <!-- ======== NỀN TRANG TRÍ ======== -->
   <div class="bg-decor" aria-hidden="true">
     <div class="blob blob-1"></div>
@@ -29,6 +63,10 @@
       <div class="hero-badge">
         <span class="dot"></span>
         Khoảnh Khắc Của Chúng Mình
+        <button class="role-switch" id="btnSwitchUser" type="button" title="Đổi người đang đăng nhập">
+          <span class="role-switch-icon">&#128187;</span>
+          <span class="role-switch-label">Anh</span>
+        </button>
       </div>
       <h1 class="hero-title">
         Nơi lưu giữ những ngày<br>
@@ -53,6 +91,21 @@
           <span class="stat-num" id="statSince">—</span>
           <span class="stat-label">từ ngày</span>
         </div>
+      </div>
+
+      <!-- ======== BO DEM NGAY YEU & DEM NGUOC ======== -->
+      <div class="love-counter" id="loveCounter">
+        <div class="counter-title">Chúng mình đã bên nhau</div>
+        <div class="counter-units">
+          <div class="cu"><span class="cu-num" id="cdDays">0</span><span class="cu-lab">ngày</span></div>
+          <div class="cu-sep">:</div>
+          <div class="cu"><span class="cu-num" id="cdHours">00</span><span class="cu-lab">giờ</span></div>
+          <div class="cu-sep">:</div>
+          <div class="cu"><span class="cu-num" id="cdMins">00</span><span class="cu-lab">phút</span></div>
+          <div class="cu-sep">:</div>
+          <div class="cu"><span class="cu-num" id="cdSecs">00</span><span class="cu-lab">giây</span></div>
+        </div>
+        <div class="countdown-row" id="countdownRow"></div>
       </div>
     </div>
   </header>
@@ -127,6 +180,28 @@
   </main>
 
   <!-- ======== MODAL XEM ALBUM / CÂU CHUYỆN ======== -->
+  <!-- ======== HOP THOI GIAN (TIME CAPSULE) ======== -->
+  <section class="capsule-section" id="capsuleSection">
+    <h2 class="section-title">Hop thoi gian <span class="section-sub">&#128274; Mo khi...</span></h2>
+    <p class="section-desc">Nhung loi nhan bi giu lai, chi mo duoc vao dung ngay do.</p>
+    <div class="capsule-grid" id="capsuleGrid"></div>
+    <button class="btn btn-soft btn-sm" id="btnAddCapsule" type="button">+ them phong bi moi</button>
+  </section>
+
+  <!-- ======== DIA DIEM KY NIEM ======== -->
+  <section class="places-section" id="placesSection">
+    <h2 class="section-title">Nhung noi chung toi da di qua <span class="section-sub" id="placesCount"></span></h2>
+    <p class="section-desc">Moi noi mot lan check-in, la mot lan nho hon.</p>
+    <div class="places-grid" id="placesGrid"></div>
+  </section>
+
+  <!-- ======== NHAC KY NIEM ======== -->
+  <button class="music-disc" id="musicDisc" type="button" title="Phat nhac ky niem" aria-label="Phat nhac ky niem">
+    <span class="music-disc-core"></span>
+    <span class="music-disc-label">&#9835;</span>
+  </button>
+  <audio id="bgMusic" loop preload="none"></audio>
+
   <div class="album-view" id="albumView" hidden>
     <div class="album-backdrop" data-close-album></div>
 
@@ -162,10 +237,19 @@
             <span class="field-label">Ngày chụp</span>
             <input type="date" id="albumEditDate">
           </label>
-          <label class="field field-wide">
-            <span class="field-label">Ghi chú</span>
-            <textarea id="albumEditNote" rows="2" placeholder="Câu chuyện của album này..."></textarea>
+                    <label class="field">
+            <span class="field-label">&#273;&#7885;&#7843;a &#273;&#7883;&#7901;m</span>
+            <input type="text" id="albumEditPlace" placeholder="VD: Quan mi cay, Bo ho...">
           </label>
+          <label class="field field-wide">
+            <span class="field-label">Ghi ch&#250;</span>
+            <textarea id="albumEditNote" rows="2" placeholder="Cau chuyen cua album nay..."></textarea>
+          </label>
+          <label class="field field-wide">
+            <span class="field-label">Nhac ky niem (link YouTube / Spotify)</span>
+            <input type="url" id="albumEditMusic" placeholder="https://youtube.com/watch?v=...">
+          </label>
+
         </div>
         <div class="album-edit-actions">
           <button class="btn btn-ghost btn-sm" id="btnCancelAlbumEdit" type="button">Hủy</button>
@@ -202,7 +286,20 @@
           <span class="dot-sep">•</span>
           <span id="lbAlbum"></span>
         </div>
-        <div class="lb-tools">
+        <div class="lb-meta-extra" id="lbMeta" hidden></div>
+        <div class="lb-reactions" id="lbReactions">
+          <div class="react-btns">
+            <button type="button" class="react-btn" data-react="&#10084;&#65039;">&#10084;&#65039;</button>
+            <button type="button" class="react-btn" data-react="&#129392;">&#129392;</button>
+            <button type="button" class="react-btn" data-react="&#128514;">&#128514;</button>
+          </div>
+          <div class="react-list" id="reactList"></div>
+          <form class="react-form" id="reactForm">
+            <input type="text" id="reactInput" class="react-input" placeholder="Mot loi hong nho cho ban..." maxlength="140">
+            <button type="submit" class="react-send" aria-label="Gui">&#10148;</button>
+          </form>
+        </div>
+<div class="lb-tools">
           <a id="lbDownload" class="btn btn-soft" download>⬇ Tải ảnh</a>
           <a id="lbShare" class="btn btn-soft" target="_blank" rel="noopener">🔗 Mở ảnh gốc</a>
           <button class="btn btn-danger" id="lbDelete" type="button">🗑 Xóa ảnh</button>
@@ -247,6 +344,27 @@
           <span class="field-label">Album</span>
           <input type="text" id="albumInput" list="albumList" placeholder="VD: Kỷ niệm, Du lịch Hội An...">
           <datalist id="albumList"></datalist>
+        <label class="field">
+          <span class="field-label">Album</span>
+          <input type="text" id="albumInput" list="albumList" placeholder="VD: Kỷ niệm, Du lịch Hội An...">
+          <datalist id="albumList"></datalist>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Địa điểm</span>
+          <input type="text" id="placeInput" list="placeList" placeholder="VD: Quán mì cay Sasin, Bờ hồ...">
+          <datalist id="placeList"></datalist>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Người đăng</span>
+          <div class="author-picker" id="authorPicker">
+            <button type="button" class="author-btn active" data-author="Anh">👦 Anh đăng</button>
+            <button type="button" class="author-btn" data-author="Bé Gấu">🐻 Bé Gấu đăng</button>
+          </div>
+        </label>
+
+
         </label>
 
         <!-- Cấu hình Cloudinary (chỉ hiện khi chưa cấu hình) -->
@@ -300,6 +418,7 @@
     <p class="footer-sub" id="footerSub"></p>
   </footer>
 
-  <script src="app.js?v=2"></script>
+  <script src="features.js?v=1"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

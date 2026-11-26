@@ -75,6 +75,12 @@ async function init() {
     console.error('Lỗi khi gắn sự kiện:', err);
   }
 
+  // Cánh cổng kỷ niệm — phải qua đăng nhập mới vào được trang chính
+  initGate();
+
+  // Dữ liệu dùng chung (time capsule, cảm xúc) — tải sẵn
+  loadSharedData();
+
   try {
     await loadConfig();
   } catch (err) {
@@ -295,6 +301,46 @@ function bindEvents() {
   $('btnSaveAlbumEdit').addEventListener('click', saveAlbumEdit);
   $('btnDeleteAlbum').addEventListener('click', deleteAlbum);
   $('btnAddToAlbum').addEventListener('click', startAddToAlbum);
+
+  // ======== Tính năng mở rộng =====
+  bindGate();
+
+  // Đổi người đang đăng nhập
+  if ($('btnSwitchUser')) $('btnSwitchUser').addEventListener('click', switchUser);
+
+  // Nút thêm time capsule
+  if ($('btnAddCapsule')) $('btnAddCapsule').addEventListener('click', addCapsule);
+
+  // Đĩa nhạc
+  bindMusic();
+
+  // Chọn người đăng trong form upload
+  document.querySelectorAll('#authorPicker .author-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#authorPicker .author-btn')
+        .forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+
+  // Nút thả cảm xúc trong lightbox
+  document.querySelectorAll('.react-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      addReaction(b.getAttribute('data-react'), '');
+    });
+  });
+
+  // Gửi lời hồi đáp
+  if ($('reactForm')) {
+    $('reactForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = $('reactInput');
+      const text = input.value.trim();
+      if (!text) return;
+      addReaction('', text);
+      input.value = '';
+    });
+  }
 
   // Phím tắt
   document.addEventListener('keydown', (e) => {
@@ -590,7 +636,11 @@ function mergePhotos(primary, secondary) {
       ...p,
       note: p.note || (old ? old.note : ''),
       date: p.date || (old ? old.date : ''),
-      album: p.album || (old ? old.album : '')
+      album: p.album || (old ? old.album : ''),
+      place: p.place || (old ? old.place : ''),
+      author: p.author || (old ? old.author : ''),
+      music: p.music || (old ? old.music : ''),
+      cover: p.cover || (old ? old.cover : '')
     });
   });
 
@@ -817,6 +867,9 @@ function normalizeCloudinaryResource(r) {
   let album = '';
   let groupId = '';
   let cover = '';
+  let place = '';
+  let author = '';
+  let music = '';
 
   // 1. Dạng object: context.custom.* hoặc context.* trực tiếp
   const ctx = r.context;
@@ -829,6 +882,9 @@ function normalizeCloudinaryResource(r) {
     album   = src.album || '';
     groupId = src.gid   || src.groupId || src.group || '';
     cover   = src.cover || src.coverId || '';
+    place   = src.place || src.location || '';
+    author  = src.author || src.by || '';
+    music   = src.music || src.song || '';
   }
 
   // 2. Dạng chuỗi "k=v|k=v" (một số phiên bản SDK trả về)
@@ -843,6 +899,9 @@ function normalizeCloudinaryResource(r) {
       if (k === 'album')   album = v;
       if (k === 'gid')     groupId = v;
       if (k === 'cover')   cover = v;
+      if (k === 'place')   place = v;
+      if (k === 'author')  author = v;
+      if (k === 'music')   music = v;
     });
   }
 
@@ -869,6 +928,9 @@ function normalizeCloudinaryResource(r) {
     album: album,
     groupId: groupId,
     cover: cover,
+    place: place,
+    author: author,
+    music: music,
     uploadedAt: r.created_at || r.uploaded_at || ''
   };
 }
@@ -897,6 +959,9 @@ function renderStats() {
       'Từ ' + d.toLocaleDateString('vi-VN') + ' đến nay — ' +
       photos.length + ' khoảnh khắc trong ' + groups.length + ' câu chuyện 💗';
   }
+
+  // Danh sách địa điểm kỷ niệm
+  if (typeof renderPlaces === 'function') renderPlaces();
 }
 
 /* ==========================================================
@@ -1022,6 +1087,8 @@ function groupPhotos(list) {
         note: p.note || '',
         date: p.date || '',
         cover: p.cover || '',
+        place: p.place || '',
+        music: p.music || '',
         photos: []
       });
     }
@@ -1034,6 +1101,8 @@ function groupPhotos(list) {
     if (!g.date && p.date) g.date = p.date;
     if (!g.note && p.note) g.note = p.note;
     if (!g.cover && p.cover) g.cover = p.cover;
+    if (!g.place && p.place) g.place = p.place;
+    if (!g.music && p.music) g.music = p.music;
   });
 
   // Ảnh bìa: ưu tiên ảnh được đánh dấu "cover", không thì lấy ảnh đầu tiên
@@ -1192,6 +1261,41 @@ function renderGallery() {
 
     info.appendChild(sub);
 
+    // Địa điểm + người đăng + nhạc
+    const tags = document.createElement('div');
+    tags.className = 'story-tags';
+
+    if (g.place) {
+      const pl = document.createElement('span');
+      pl.className = 'story-tag place';
+      pl.textContent = '📍 ' + g.place;
+      tags.appendChild(pl);
+    }
+
+    const author = g.photos.find(p => p.author);
+    if (author && author.author) {
+      const au = document.createElement('span');
+      const isAnh = author.author === 'Anh';
+      au.className = 'story-tag ' + (isAnh ? 'by-anh' : 'by-gau');
+      au.textContent = (isAnh ? '👦 Anh đăng' : '🐻 Bé Gấu đăng');
+      tags.appendChild(au);
+    }
+
+    if (g.music) {
+      const mu = document.createElement('button');
+      mu.type = 'button';
+      mu.className = 'story-tag music';
+      mu.textContent = '🎵 Nhạc kỷ niệm';
+      mu.title = g.music;
+      mu.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playAlbumMusic(g.music);
+      });
+      tags.appendChild(mu);
+    }
+
+    if (tags.children.length) info.appendChild(tags);
+
     if (g.note) {
       const note = document.createElement('p');
       note.className = 'story-note';
@@ -1315,6 +1419,8 @@ function openAlbum(groupId) {
   $('albumEditName').value = g.title || '';
   $('albumEditDate').value = g.date || '';
   $('albumEditNote').value = g.note || '';
+  if ($('albumEditPlace')) $('albumEditPlace').value = g.place || '';
+  if ($('albumEditMusic')) $('albumEditMusic').value = g.music || '';
   $('albumEdit').hidden = true;
 
   renderAlbumGrid();
@@ -1489,6 +1595,8 @@ async function saveAlbumEdit() {
   const name = $('albumEditName').value.trim();
   const date = $('albumEditDate').value;
   const note = $('albumEditNote').value.trim();
+  const place = $('albumEditPlace') ? $('albumEditPlace').value.trim() : '';
+  const music = $('albumEditMusic') ? $('albumEditMusic').value.trim() : '';
 
   const btn = $('btnSaveAlbumEdit');
   btn.disabled = true;
@@ -1503,7 +1611,9 @@ async function saveAlbumEdit() {
         public_ids: albumPhotos.map(p => p.id),
         album: name,
         date: date,
-        note: note
+        note: note,
+        place: place,
+        music: music
       })
     });
 
@@ -1518,6 +1628,8 @@ async function saveAlbumEdit() {
       p.album = name;
       p.date = date;
       if (note) p.note = note;
+      p.place = place;
+      p.music = music;
     });
 
     // Đồng bộ lại toàn bộ photos (cùng groupId)
@@ -1526,6 +1638,8 @@ async function saveAlbumEdit() {
         p.album = name;
         p.date = date;
         if (note) p.note = note;
+        p.place = place;
+        p.music = music;
       }
     });
 
@@ -1649,6 +1763,19 @@ function openLightbox(index, onClose) {
 
   $('lbAlbum').textContent = p.album || '';
   $('lbAlbum').hidden = !p.album;
+
+  // Địa điểm + người đăng
+  const meta = $('lbMeta');
+  if (meta) {
+    const bits = [];
+    if (p.place) bits.push('📍 ' + p.place);
+    if (p.author) bits.push(p.author === 'Anh' ? '👦 Anh đăng' : '🐻 Bé Gấu đăng');
+    meta.textContent = bits.join('  ·  ');
+    meta.hidden = !bits.length;
+  }
+
+  // Cảm xúc & hồi đáp
+  if (typeof renderReactions === 'function') renderReactions();
 
   const dl = $('lbDownload');
   dl.href = p.url;
@@ -1950,6 +2077,12 @@ async function doUpload() {
   const note = $('noteInput').value.trim();
   const date = $('dateInput').value;
   const album = $('albumInput').value.trim();
+  const place = $('placeInput') ? $('placeInput').value.trim() : '';
+
+  // Nguoi dang: mac dinh la nguoi dang nhap, hoac chon trong form
+  let author = currentRole();
+  const activeAuthor = document.querySelector('#authorPicker .author-btn.active');
+  if (activeAuthor) author = activeAuthor.getAttribute('data-author');
 
   // Mỗi lần upload = 1 nhóm/câu chuyện riêng.
   // Nếu đang thêm vào 1 album cụ thể → dùng lại groupId của album đó.
@@ -1971,7 +2104,8 @@ async function doUpload() {
         note,
         date,
         album,
-        groupId
+        groupId,
+        { place: place, author: author, music: '' }
       );
       uploaded.push(result);
     } catch (err) {
@@ -2044,7 +2178,7 @@ function escapeContextValue(value) {
  * `groupId` là mã định danh của "lần upload" (mỗi lần bấm Tải lên = 1 nhóm).
  * Nhờ đó web gom các ảnh upload cùng lúc thành 1 album/câu chuyện.
  */
-function uploadToCloudinary(file, note, date, album, groupId) {
+function uploadToCloudinary(file, note, date, album, groupId, extra) {
   return new Promise((resolve, reject) => {
     const url = `https://api.cloudinary.com/v1_1/${CONFIG.cloudName}/image/upload`;
 
@@ -2052,12 +2186,17 @@ function uploadToCloudinary(file, note, date, album, groupId) {
     formData.append('file', file);
     formData.append('upload_preset', CONFIG.uploadPreset);
 
+    const ex = extra || {};
+
     // Ghi chú / ngày / album / mã nhóm lưu kèm trong Cloudinary (context)
     const ctxParts = [
       'note=' + escapeContextValue(note),
       'date=' + escapeContextValue(date),
       'album=' + escapeContextValue(album),
-      'gid=' + escapeContextValue(groupId)
+      'gid=' + escapeContextValue(groupId),
+      'place=' + escapeContextValue(ex.place || ''),
+      'author=' + escapeContextValue(ex.author || ''),
+      'music=' + escapeContextValue(ex.music || '')
     ];
     formData.append('context', ctxParts.join('|'));
 
@@ -2090,6 +2229,9 @@ function uploadToCloudinary(file, note, date, album, groupId) {
           date: date || '',
           album: album || '',
           groupId: groupId || '',
+          place: ex.place || '',
+          author: ex.author || '',
+          music: ex.music || '',
           uploadedAt: new Date().toISOString()
         });
       })
@@ -2134,6 +2276,16 @@ function slugify(text) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);
+}
+
+/** Escape HTML để tránh injection khi chèn text của người dùng */
+function escapeHtml(text) {
+  return String(text == null ? '' : text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /**
