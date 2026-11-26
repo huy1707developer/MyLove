@@ -343,10 +343,16 @@
       }
     });
 
-    // Cuộn → cập nhật vị trí popup fixed
+    // Cuộn / đổi kích thước → cập nhật vị trí popup fixed
     window.addEventListener('resize', function () {
       if (popup.classList.contains('show') && useFixed) positionFixed();
     });
+
+    // Gắn listener cuộn (capture = true để bắt cả cuộn trong container)
+    var scrollHandler = function () {
+      if (popup.classList.contains('show') && useFixed) positionFixed();
+    };
+    window.addEventListener('scroll', scrollHandler, true);
 
     updateDisplay();
     renderCalendar();
