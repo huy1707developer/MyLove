@@ -272,17 +272,30 @@
 }
 
 /* Thanh nút tắt bên dưới */
+/* Thanh nut tat ben duoi - 2 dong de chu khong tran ra ngoai khung */
 .vn-cal-footer {
-  display: flex !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
   align-items: center !important;
-  justify-content: space-between !important;
-  flex-wrap: nowrap !important;
-  gap: 4px !important;
+  gap: 3px !important;
   margin: 10px 0 0 !important;
   padding: 8px 0 0 !important;
   border-top: 1px dashed #ffe5ec !important;
   height: auto !important;
   min-height: 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Nut "Ngay hen ho" chiem 1 dong rieng, canh giua */
+.vn-cal-footer > .vn-cal-action-btn:first-child {
+  grid-column: 1 / -1 !important;
+  justify-self: center !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+  text-align: center !important;
 }
 
 .vn-cal-action-btn {
@@ -290,16 +303,21 @@
   border: none !important;
   outline: none !important;
   font-family: inherit !important;
-  font-size: 11.5px !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
+  line-height: 1.3 !important;
   color: #ff4d6d !important;
   cursor: pointer !important;
-  padding: 4px 6px !important;
+  padding: 4px 4px !important;
   margin: 0 !important;
   border-radius: 8px !important;
   height: auto !important;
   min-height: 0 !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
   white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
   box-shadow: none !important;
   appearance: none !important;
   -webkit-appearance: none !important;
