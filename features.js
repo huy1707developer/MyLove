@@ -855,7 +855,7 @@ function renderRoleBadges() {
     el.textContent = role;
   });
   document.querySelectorAll('.role-switch-icon').forEach(el => {
-    el.textContent = role === 'Anh' ? '\u{1F466}' : '\u{1F43B}';  });
+    el.textContent = role === 'Anh' ? '\u{1F466}' : '\u{1F9F8}';  });
 }
 
 function renderAuthorPicker() {

@@ -1277,7 +1277,7 @@ function renderGallery() {
       const au = document.createElement('span');
       const isAnh = author.author === 'Anh';
       au.className = 'story-tag ' + (isAnh ? 'by-anh' : 'by-gau');
-      au.textContent = (isAnh ? '👦 Anh đăng' : '🐻 Bé Yêu đăng');
+      au.textContent = (isAnh ? '👦 Anh đăng' : '🧸 Bé Yêu đăng');
       tags.appendChild(au);
     }
 
@@ -1769,7 +1769,7 @@ function openLightbox(index, onClose) {
   if (meta) {
     const bits = [];
     if (p.place) bits.push('📍 ' + p.place);
-    if (p.author) bits.push(p.author === 'Anh' ? '👦 Anh đăng' : '🐻 Bé Yêu đăng');
+    if (p.author) bits.push(p.author === 'Anh' ? '👦 Anh đăng' : '🧸 Bé Yêu đăng');
     meta.textContent = bits.join('  ·  ');
     meta.hidden = !bits.length;
   }
