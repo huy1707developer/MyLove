@@ -816,6 +816,7 @@ function normalizeCloudinaryResource(r) {
   let date = '';
   let album = '';
   let groupId = '';
+  let cover = '';
 
   // 1. Dạng object: context.custom.* hoặc context.* trực tiếp
   const ctx = r.context;
@@ -827,6 +828,7 @@ function normalizeCloudinaryResource(r) {
     date    = src.date  || '';
     album   = src.album || '';
     groupId = src.gid   || src.groupId || src.group || '';
+    cover   = src.cover || src.coverId || '';
   }
 
   // 2. Dạng chuỗi "k=v|k=v" (một số phiên bản SDK trả về)
@@ -840,6 +842,7 @@ function normalizeCloudinaryResource(r) {
       if (k === 'date')    date = v;
       if (k === 'album')   album = v;
       if (k === 'gid')     groupId = v;
+      if (k === 'cover')   cover = v;
     });
   }
 
@@ -865,6 +868,7 @@ function normalizeCloudinaryResource(r) {
     date: date,
     album: album,
     groupId: groupId,
+    cover: cover,
     uploadedAt: r.created_at || r.uploaded_at || ''
   };
 }
@@ -1017,6 +1021,7 @@ function groupPhotos(list) {
         title: p.album || '',
         note: p.note || '',
         date: p.date || '',
+        cover: p.cover || '',
         photos: []
       });
     }
@@ -1028,6 +1033,20 @@ function groupPhotos(list) {
     if (!g.title && p.album) g.title = p.album;
     if (!g.date && p.date) g.date = p.date;
     if (!g.note && p.note) g.note = p.note;
+    if (!g.cover && p.cover) g.cover = p.cover;
+  });
+
+  // Ảnh bìa: ưu tiên ảnh được đánh dấu "cover", không thì lấy ảnh đầu tiên
+  [...map.values()].forEach(g => {
+    if (g.cover) {
+      const found = g.photos.find(p => p.id === g.cover);
+      if (found) {
+        // Đưa ảnh bìa lên đầu danh sách
+        g.photos = [found, ...g.photos.filter(p => p.id !== found.id)];
+      } else {
+        g.cover = '';
+      }
+    }
   });
 
   // Sắp xếp nhóm mới nhất lên đầu
@@ -1227,45 +1246,44 @@ function renderGallery() {
  *   - Nối bằng đường cong Bezier, xen kẽ trái-phải
  */
 function drawTimelinePath(container, svg, path) {
-  const cards = container.querySelectorAll('.story-row:not(.story-row-add) .story');
+  const rows = [...container.querySelectorAll('.story-row:not(.story-row-add)')];
+  const cards = rows.map(r => r.querySelector('.story')).filter(Boolean);
   if (cards.length < 2) {
     path.setAttribute('d', '');
     return;
   }
 
   const box = container.getBoundingClientRect();
-  svg.setAttribute('viewBox', `0 0 ${box.width} ${box.height}`);
+  svg.setAttribute('viewBox', '0 0 ' + box.width + ' ' + box.height);
   svg.setAttribute('width', box.width);
   svg.setAttribute('height', box.height);
 
-  // Thu thập các điểm mốc
-  const points = [...cards].map(card => {
+  // Thu thap diem moc: noi tiep giua mep trong cua the (huong ve giua man hinh)
+  const points = cards.map((card, i) => {
     const r = card.getBoundingClientRect();
-    const isEven = card.closest('.story-row').classList.contains('story-row') &&
-                   [...container.querySelectorAll('.story-row:not(.story-row-add)')]
-                     .indexOf(card.closest('.story-row')) % 2 === 1;
-
-    // Điểm mốc nằm ở mép trong (hướng về giữa) của thẻ
-    const x = isEven ? r.right - box.left : r.left - box.left;
+    const isOdd = rows[i].classList.contains('odd');
+    const x = isOdd ? r.left - box.left : r.right - box.left;
     const y = r.top - box.top + r.height / 2;
-    return { x, y, side: isEven ? 'right' : 'left' };
+    return { x: x, y: y, side: isOdd ? 'left' : 'right' };
   });
 
-  // Tạo path nối các điểm bằng đường cong Bezier
-  let d = `M ${points[0].x} ${points[0].y}`;
+  // Duong cong Bezier mem mai: lan ra phia giua roi quay lai
+  let d = 'M ' + points[0].x + ' ' + points[0].y;
 
   for (let i = 1; i < points.length; i++) {
     const prev = points[i - 1];
     const cur = points[i];
     const dy = (cur.y - prev.y) / 2;
 
-    // Uốn lượn: điểm rẽ ra ngoài rồi quay lại
-    const c1x = prev.x + (prev.side === 'left' ? -55 : 55);
-    const c1y = prev.y + dy * 0.55;
-    const c2x = cur.x + (cur.side === 'left' ? -55 : 55);
-    const c2y = cur.y - dy * 0.55;
+    // Ria sang ben trong duong nho, nhung lui xa de duong cong khong gay
+    const out1 = prev.side === 'left' ? -70 : 70;
+    const out2 = cur.side === 'left' ? -70 : 70;
+    const c1x = prev.x + out1;
+    const c1y = prev.y + dy * 0.5;
+    const c2x = cur.x + out2;
+    const c2y = cur.y - dy * 0.5;
 
-    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${cur.x} ${cur.y}`;
+    d += ' C ' + c1x + ' ' + c1y + ', ' + c2x + ' ' + c2y + ', ' + cur.x + ' ' + cur.y;
   }
 
   path.setAttribute('d', d);
@@ -1334,17 +1352,88 @@ function renderAlbumGrid() {
 
     cell.appendChild(img);
 
-    // Ghi chú riêng của ảnh
+    // Ghi chú riêng của ảnh (chỉ hiện khi hover - xem CSS)
     if (p.note && p.note !== $('albumEditNote').value) {
       const cap = document.createElement('figcaption');
       cap.textContent = p.note;
       cell.appendChild(cap);
     }
 
+    // Nút "đặt làm ảnh bìa" — chỉ hiện khi hover
+    const coverBtn = document.createElement('button');
+    coverBtn.type = 'button';
+    coverBtn.className = 'album-cell-cover';
+    coverBtn.title = 'Đặt ảnh này làm bìa album';
+    coverBtn.innerHTML = '⭐ Bìa';
+    coverBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setAlbumCover(p);
+    });
+    cell.appendChild(coverBtn);
+
+    // Đánh dấu ảnh đang là bìa
+    const groups = groupPhotos(filtered);
+    const cur = groups.find(x => x.id === currentAlbumId);
+    if (cur && cur.cover === p.id) {
+      cell.classList.add('is-cover');
+      const tag = document.createElement('span');
+      tag.className = 'album-cell-tag';
+      tag.textContent = '⭐ Bìa';
+      cell.appendChild(tag);
+    }
+
     cell.addEventListener('click', () => openAlbumLightbox(i));
 
     grid.appendChild(cell);
   });
+}
+
+/**
+ * Đặt 1 ảnh làm ảnh bìa của album đang mở.
+ * Ghi `cover=<public_id>` vào context của TẤT CẢ ảnh trong album.
+ */
+async function setAlbumCover(photo) {
+  if (!currentAlbumId || !photo) return;
+
+  const btn = document.querySelector('.album-cell-cover');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳...'; }
+
+  try {
+    const res = await fetch('/api/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        public_ids: albumPhotos.map(p => p.id),
+        cover: photo.id
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error((data && data.error && data.error.message) || ('HTTP ' + res.status));
+    }
+
+    // Cập nhật trong bộ nhớ
+    albumPhotos.forEach(p => { p.cover = photo.id; });
+    photos.forEach(p => {
+      if (albumPhotos.some(a => a.id === p.id)) p.cover = photo.id;
+    });
+    savePhotosToLocal();
+
+    renderAlbumGrid();
+    applyFilters();
+    renderStats();
+    renderAlbumList();
+
+    toast('Đã đặt ảnh làm bìa album ⭐', 'success');
+  } catch (err) {
+    console.error('❌ Lỗi đặt ảnh bìa:', err);
+    toast('Không đặt được bìa: ' + err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = oldText; }
+  }
 }
 
 /**

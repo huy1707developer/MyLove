@@ -6,19 +6,25 @@
  *   "public_ids": ["lovegallery/a", "lovegallery/b"],
  *   "album": "Tên album",
  *   "date": "2026-11-23",
- *   "note": "Ghi chú"
+ *   "note": "Ghi chú",
+ *   "cover": "lovegallery/xyz"      // (tuỳ chọn) public_id của ảnh bìa
  * }
  *
- * Dùng Cloudinary Admin API:
- *   POST /v1_1/{cloud}/resources/image/context
- * với body { "context": "k=v|k=v", "public_ids": [...] }
+ * ⚠️ Endpoint ĐÚNG của Cloudinary:
+ *      POST /v1_1/{cloud}/image/context
+ *    với body { "command": "add", "context": "k=v|k=v", "public_ids": [...] }
+ *
+ *    Endpoint `POST /resources/image/context` KHÔNG tồn tại (trả 404).
+ *
+ * `command: "add"` sẽ GHI ĐÈ các key được gửi và GIỮ nguyên các key khác
+ * (ví dụ set ảnh bìa mà không mất album/date/note đã có).
  */
 
 const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'dppt775qk';
 const API_KEY = process.env.CLOUDINARY_API_KEY || '521171572676425';
 const API_SECRET = process.env.CLOUDINARY_API_SECRET || 'OvJ6emfFxxwm6BSEjj-fHbMEsS4';
 
-/** Escape giá trị cho Cloudinary context (dùng | làm dấu phân cách). */
+/** Escape giá trị cho Cloudinary context (dùng `|` làm dấu phân cách). */
 function esc(value) {
   return String(value || '')
     .replace(/\\/g, '\\\\')
@@ -76,6 +82,7 @@ module.exports = async function handler(req, res) {
     if (body.album !== undefined) ctxParts.push('album=' + esc(body.album));
     if (body.date !== undefined) ctxParts.push('date=' + esc(body.date));
     if (body.note !== undefined) ctxParts.push('note=' + esc(body.note));
+    if (body.cover !== undefined) ctxParts.push('cover=' + esc(body.cover));
 
     if (!ctxParts.length) {
       res.status(400).json({ error: { message: 'Không có gì để cập nhật' } });
@@ -83,7 +90,7 @@ module.exports = async function handler(req, res) {
     }
 
     const url =
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/resources/image/context`;
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/context`;
 
     const cldRes = await fetch(url, {
       method: 'POST',
@@ -92,6 +99,7 @@ module.exports = async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        command: 'add',
         context: ctxParts.join('|'),
         public_ids: safeIds
       })
@@ -114,7 +122,7 @@ module.exports = async function handler(req, res) {
     try { data = JSON.parse(bodyText); } catch (e) { /* bỏ qua */ }
 
     res.status(200).json({
-      updated: data.updated || safeIds,
+      updated: data.public_ids || safeIds,
       public_ids: safeIds
     });
   } catch (err) {
