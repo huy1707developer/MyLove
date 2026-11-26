@@ -1723,7 +1723,7 @@ function openLightbox(index, onClose) {
 
   const dl = $('lbDownload');
   dl.href = p.url;
-  dl.download = (p.filename || 'photo') + (p.note ? '_' + slugify(p.note) : '');
+  dl.download = buildDownloadName(p);
   dl.setAttribute('data-photo-url', p.url);
   dl.setAttribute('data-photo-name', dl.download);
   dl.removeAttribute('target');
@@ -2295,6 +2295,46 @@ function slugify(text) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);
+}
+
+/**
+ * Tạo tên file an toàn cho ảnh tải về.
+ * - Bỏ dấu / và ký tự lạ (tránh tạo thư mục con ngoài ý muốn)
+ * - Giữ đuôi file gốc (.jpg / .png / ...)
+ * - Có fallback khi không có tên
+ */
+function buildDownloadName(p) {
+  let base = p.filename || 'photo';
+
+  // Chỉ lấy phần tên file, bỏ đường dẫn
+  base = base.split('/').pop().split('\\').pop();
+
+  // Bỏ đuôi file để ghép lại cho chuẩn
+  let ext = '';
+  const dot = base.lastIndexOf('.');
+  if (dot > 0 && base.length - dot <= 6) {
+    ext = base.slice(dot).toLowerCase();
+    base = base.slice(0, dot);
+  }
+
+  // Chỉ giữ ký tự an toàn
+  base = base
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-zA-Z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 60);
+
+  if (!base) base = 'photo';
+
+  // Ghi chú thì thêm vào sau
+  if (p.note) {
+    const s = slugify(p.note);
+    if (s) base += '_' + s;
+  }
+
+  return base + (ext || '.jpg');
 }
 
 /** Escape HTML để tránh injection khi chèn text của người dùng */
