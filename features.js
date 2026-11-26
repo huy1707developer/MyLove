@@ -473,13 +473,20 @@ function renderCapsules() {
     const dateLabel = c.openDate ? formatDate(c.openDate) : '';
 
     const card = document.createElement('article');
-    card.className = 'capsule-card is-open';
+    card.className = 'capsule-card is-open is-clickable';
+    card.setAttribute('data-capsule-id', c.id || '');
+    card.setAttribute('title', 'Bấm để đọc / sửa / xóa');
 
     card.innerHTML =
       '<div class="capsule-emoji">' + emoji + '</div>' +
       '<div class="capsule-title">' + escapeHtml(c.title || 'Phong bi') + '</div>' +
       (dateLabel ? '<div class="capsule-date">' + escapeHtml(dateLabel) + '</div>' : '') +
       '<div class="capsule-body">' + escapeHtml(c.message || '') + '</div>';
+
+    // Bam de mo pop-up sua
+    card.addEventListener('click', () => {
+      openCapsuleModal(c);
+    });
 
     grid.appendChild(card);
   });
@@ -503,7 +510,9 @@ function renderReminders() {
 
   list.forEach((r) => {
     const card = document.createElement('article');
-    card.className = 'reminder-card';
+    card.className = 'reminder-card is-clickable';
+    card.setAttribute('data-reminder-id', r.id || '');
+    card.setAttribute('title', 'Bấm để đọc / sửa / xóa');
 
     const dateLabel = r.date ? formatDate(r.date) : '';
 
@@ -514,6 +523,11 @@ function renderReminders() {
       '</div>' +
       (dateLabel ? '<div class="reminder-date">' + escapeHtml(dateLabel) + '</div>' : '') +
       '<div class="reminder-body">' + escapeHtml(r.text || '') + '</div>';
+
+    // Bam de mo pop-up sua
+    card.addEventListener('click', () => {
+      openReminderModal(r);
+    });
 
     grid.appendChild(card);
   });
@@ -533,30 +547,54 @@ function addCapsule() {
 
 let capsuleModalBound = false;
 let capsuleEmoji = '💌';
+let capsuleEditId = null;   // null = dang them moi, co id = dang sua
 
-function openCapsuleModal() {
+function openCapsuleModal(editItem) {
   const modal = $('capsuleModal');
   if (!modal) { addCapsuleLegacy(); return; }
 
   bindCapsuleModal();
 
-  // Reset form
   const titleInput = $('capsuleTitleInput');
   const msgInput = $('capsuleMessageInput');
   const dateInput = $('capsuleDateInput');
-  if (titleInput) titleInput.value = '';
-  if (msgInput) msgInput.value = '';
-  capsuleEmoji = '💌';
+  const modalTitle = document.querySelector('#capsuleModal .modal-title');
+  const subEl = document.querySelector('#capsuleModal .capsule-modal-sub');
+  const saveBtn = $('btnSaveCapsule');
+  const delBtn = $('btnDeleteCapsule');
 
-  // Ngay tuy chon (ngay nao ta lam gi) - de trong mac dinh
-  if (dateInput) dateInput.value = '';
+  capsuleEditId = (editItem && editItem.id) ? editItem.id : null;
+
+  if (capsuleEditId) {
+    // ======== CHE DO SUA ========
+    if (titleInput) titleInput.value = editItem.title || '';
+    if (msgInput) msgInput.value = editItem.message || '';
+    if (dateInput) dateInput.value = editItem.openDate || '';
+    capsuleEmoji = editItem.emoji || '💌';
+
+    if (modalTitle) modalTitle.textContent = 'Sửa phong bì 💌';
+    if (subEl) subEl.textContent = 'Cập nhật kỷ niệm của hai đứa rồi lưu lại nhé.';
+    if (saveBtn) saveBtn.textContent = '💾 Lưu thay đổi';
+    if (delBtn) delBtn.hidden = false;
+  } else {
+    // ======== CHE DO THEM MOI ========
+    if (titleInput) titleInput.value = '';
+    if (msgInput) msgInput.value = '';
+    if (dateInput) dateInput.value = '';
+    capsuleEmoji = '💌';
+
+    if (modalTitle) modalTitle.textContent = 'Một kỷ niệm trong phong bì 💌';
+    if (subEl) subEl.textContent = 'Ghi lại một kỷ niệm, một lời nhắc dành cho nhau — bạn muốn đọc lúc nào cũng được.';
+    if (saveBtn) saveBtn.textContent = '💌 Gửi phong bì';
+    if (delBtn) delBtn.hidden = true;
+  }
 
   // Highlight emoji mac dinh
   document.querySelectorAll('#capsuleEmojiPicker .emoji-opt').forEach(b => {
-    b.classList.toggle('active', b.getAttribute('data-emoji') === '💌');
+    b.classList.toggle('active', b.getAttribute('data-emoji') === capsuleEmoji);
   });
   const headEmoji = $('capsuleModalEmoji');
-  if (headEmoji) headEmoji.textContent = '💌';
+  if (headEmoji) headEmoji.textContent = capsuleEmoji;
 
   updateCapsuleDateHint();
 
@@ -612,6 +650,10 @@ function bindCapsuleModal() {
 
   // Luu
   if (saveBtn) saveBtn.addEventListener('click', saveCapsuleFromModal);
+
+  // Xoa
+  const delBtn = $('btnDeleteCapsule');
+  if (delBtn) delBtn.addEventListener('click', deleteCapsule);
 
   // Enter de luu
   const titleInput = $('capsuleTitleInput');
@@ -679,27 +721,66 @@ async function saveCapsuleFromModal() {
   }
 
   const btn = $('btnSaveCapsule');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang lưu...'; }
 
   if (!Array.isArray(window.SHARED.capsules)) window.SHARED.capsules = [];
 
-  window.SHARED.capsules.push({
-    id: 'cap_' + Date.now(),
-    title: title,
-    openDate: dateStr,
-    message: message,
-    emoji: emoji,
-    createdAt: new Date().toISOString()
-  });
+  if (capsuleEditId) {
+    // Cap nhat phong bi co san
+    const item = window.SHARED.capsules.find(c => c.id === capsuleEditId);
+    if (item) {
+      item.title = title;
+      item.openDate = dateStr;
+      item.message = message;
+      item.emoji = emoji;
+      item.updatedAt = new Date().toISOString();
+    }
+  } else {
+    window.SHARED.capsules.push({
+      id: 'cap_' + Date.now(),
+      title: title,
+      openDate: dateStr,
+      message: message,
+      emoji: emoji,
+      createdAt: new Date().toISOString()
+    });
+  }
 
   const ok = await saveSharedData();
 
   if (btn) { btn.disabled = false; btn.textContent = '💌 Gửi phong bì'; }
 
   if (ok) {
+    const wasEdit = !!capsuleEditId;
     renderCapsules();
     closeCapsuleModal();
-    toast('Đã gửi phong bì tương lai 💌', 'success');
+    capsuleEditId = null;
+    toast(wasEdit ? 'Đã cập nhật phong bì 💌' : 'Đã gửi phong bì tương lai 💌', 'success');
+  }
+}
+
+/** Xoa phong bi */
+async function deleteCapsule() {
+  if (!capsuleEditId) return;
+
+  const item = window.SHARED.capsules.find(c => c.id === capsuleEditId);
+  const name = item ? (item.title || 'phong bì') : 'phong bì';
+
+  const yes = await confirmDialog(
+    'Xóa phong bì này?',
+    '"' + name + '" sẽ bị xóa vĩnh viễn và không lấy lại được đâu nhé 🥺',
+    '🗑 Xóa đi'
+  );
+  if (!yes) return;
+
+  window.SHARED.capsules = window.SHARED.capsules.filter(c => c.id !== capsuleEditId);
+
+  const ok = await saveSharedData();
+  if (ok) {
+    renderCapsules();
+    closeCapsuleModal();
+    capsuleEditId = null;
+    toast('Đã xóa phong bì 🗑', 'success');
   }
 }
 
@@ -707,8 +788,9 @@ async function saveCapsuleFromModal() {
 
 let reminderModalBound = false;
 let reminderEmoji = '📌';
+let reminderEditId = null;   // null = dang them moi, co id = dang sua
 
-function openReminderModal() {
+function openReminderModal(editItem) {
   const modal = $('reminderModal');
   if (!modal) { addReminderLegacy(); return; }
 
@@ -717,16 +799,40 @@ function openReminderModal() {
   const titleInput = $('reminderTitleInput');
   const textInput = $('reminderTextInput');
   const dateInput = $('reminderDateInput');
-  if (titleInput) titleInput.value = '';
-  if (textInput) textInput.value = '';
-  if (dateInput) dateInput.value = '';
-  reminderEmoji = '📌';
+  const modalTitle = document.querySelector('#reminderModal .modal-title');
+  const subEl = document.querySelector('#reminderModal .capsule-modal-sub');
+  const saveBtn = $('btnSaveReminder');
+  const delBtn = $('btnDeleteReminder');
+
+  reminderEditId = (editItem && editItem.id) ? editItem.id : null;
+
+  if (reminderEditId) {
+    if (titleInput) titleInput.value = editItem.title || '';
+    if (textInput) textInput.value = editItem.text || '';
+    if (dateInput) dateInput.value = editItem.date || '';
+    reminderEmoji = editItem.emoji || '📌';
+
+    if (modalTitle) modalTitle.textContent = 'Sửa lời nhắc 📌';
+    if (subEl) subEl.textContent = 'Cập nhật lời nhắc nhở của hai đứa rồi lưu lại nhé.';
+    if (saveBtn) saveBtn.textContent = '💾 Lưu thay đổi';
+    if (delBtn) delBtn.hidden = false;
+  } else {
+    if (titleInput) titleInput.value = '';
+    if (textInput) textInput.value = '';
+    if (dateInput) dateInput.value = '';
+    reminderEmoji = '📌';
+
+    if (modalTitle) modalTitle.textContent = 'Ghi chú cho nhau 📌';
+    if (subEl) subEl.textContent = 'Một lời nhắc nhở luôn hiện thị trên trang, không cần đợi đến một ngày nào cả.';
+    if (saveBtn) saveBtn.textContent = '💾 Lưu lời nhắc';
+    if (delBtn) delBtn.hidden = true;
+  }
 
   document.querySelectorAll('#reminderEmojiPicker .emoji-opt').forEach(b => {
-    b.classList.toggle('active', b.getAttribute('data-emoji') === '📌');
+    b.classList.toggle('active', b.getAttribute('data-emoji') === reminderEmoji);
   });
   const head = $('reminderModalEmoji');
-  if (head) head.textContent = '📌';
+  if (head) head.textContent = reminderEmoji;
 
   modal.hidden = false;
   document.body.classList.add('modal-open');
@@ -775,6 +881,9 @@ function bindReminderModal() {
 
   if (saveBtn) saveBtn.addEventListener('click', saveReminderFromModal);
 
+  const delBtn = $('btnDeleteReminder');
+  if (delBtn) delBtn.addEventListener('click', deleteReminder);
+
   const titleInput = $('reminderTitleInput');
   if (titleInput) {
     titleInput.addEventListener('keydown', (e) => {
@@ -808,23 +917,61 @@ async function saveReminderFromModal() {
 
   if (!Array.isArray(window.SHARED.reminders)) window.SHARED.reminders = [];
 
-  window.SHARED.reminders.push({
-    id: 'rem_' + Date.now(),
-    title: title,
-    text: text,
-    date: dateStr,
-    emoji: emoji,
-    createdAt: new Date().toISOString()
-  });
+  if (reminderEditId) {
+    const item = window.SHARED.reminders.find(r => r.id === reminderEditId);
+    if (item) {
+      item.title = title;
+      item.text = text;
+      item.date = dateStr;
+      item.emoji = emoji;
+      item.updatedAt = new Date().toISOString();
+    }
+  } else {
+    window.SHARED.reminders.push({
+      id: 'rem_' + Date.now(),
+      title: title,
+      text: text,
+      date: dateStr,
+      emoji: emoji,
+      createdAt: new Date().toISOString()
+    });
+  }
 
   const ok = await saveSharedData();
 
   if (btn) { btn.disabled = false; btn.textContent = '💾 Lưu lời nhắc'; }
 
   if (ok) {
+    const wasEdit = !!reminderEditId;
     renderReminders();
     closeReminderModal();
-    toast('Đã lưu lời nhắc nhở 📌', 'success');
+    reminderEditId = null;
+    toast(wasEdit ? 'Đã cập nhật lời nhắc 📌' : 'Đã lưu lời nhắc nhở 📌', 'success');
+  }
+}
+
+/** Xoa loi nhac nho */
+async function deleteReminder() {
+  if (!reminderEditId) return;
+
+  const item = window.SHARED.reminders.find(r => r.id === reminderEditId);
+  const name = item ? (item.title || item.text || 'lời nhắc') : 'lời nhắc';
+
+  const yes = await confirmDialog(
+    'Xóa lời nhắc này?',
+    '"' + name + '" sẽ bị xóa vĩnh viễn và không lấy lại được đâu nhé 🥺',
+    '🗑 Xóa đi'
+  );
+  if (!yes) return;
+
+  window.SHARED.reminders = window.SHARED.reminders.filter(r => r.id !== reminderEditId);
+
+  const ok = await saveSharedData();
+  if (ok) {
+    renderReminders();
+    closeReminderModal();
+    reminderEditId = null;
+    toast('Đã xóa lời nhắc 🗑', 'success');
   }
 }
 

@@ -423,9 +423,12 @@
         <span class="field-hint">Có thể để trống nếu muốn giữ bí mật 💭</span>
       </label>
 
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="btnCancelCapsule" type="button">Hủy</button>
-        <button class="btn btn-primary" id="btnSaveCapsule" type="button">💌 Gửi phong bì</button>
+      <div class="modal-actions modal-actions-split">
+        <button class="btn btn-danger btn-ghost-danger" id="btnDeleteCapsule" type="button" hidden>🗑 Xóa</button>
+        <span class="modal-actions-right">
+          <button class="btn btn-ghost" id="btnCancelCapsule" type="button">Hủy</button>
+          <button class="btn btn-primary" id="btnSaveCapsule" type="button">💌 Gửi phong bì</button>
+        </span>
       </div>
     </div>
   </div>
@@ -442,7 +445,7 @@
         <div class="capsule-modal-emoji" id="reminderModalEmoji">&#128204;</div>
         <h2 class="modal-title">Ghi chú cho nhau &#128204;</h2>
         <p class="capsule-modal-sub">
-          Một lời nhḜ nhở luôn hiện thị trên trang, không cầ đội đến một ngày nào cả.
+          Một lời nhắc nhở luôn hiện thị trên trang, không cần đợi đến một ngày nào cả.
         </p>
       </div>
 
@@ -473,14 +476,17 @@
       </label>
 
       <label class="field field-wide">
-        <span class="field-label">Nội dung lời nhḜ</span>
+        <span class="field-label">Nội dung lời nhắc</span>
         <textarea id="reminderTextInput" rows="4" maxlength="400"
                   placeholder="Nhớ uống nước nhiều mối ngày nha anh..."></textarea>
       </label>
 
-      <div class="modal-actions">
-        <button class="btn btn-ghost" id="btnCancelReminder" type="button">Hủy</button>
-        <button class="btn btn-primary" id="btnSaveReminder" type="button">&#128190; Lưu lời nhḜ</button>
+      <div class="modal-actions modal-actions-split">
+        <button class="btn btn-danger btn-ghost-danger" id="btnDeleteReminder" type="button" hidden>🗑 Xóa</button>
+        <span class="modal-actions-right">
+          <button class="btn btn-ghost" id="btnCancelReminder" type="button">Hủy</button>
+          <button class="btn btn-primary" id="btnSaveReminder" type="button">&#128190; Lưu lời nhắc</button>
+        </span>
       </div>
     </div>
   </div>
@@ -600,7 +606,7 @@
     <p class="footer-sub" id="footerSub"></p>
   </footer>
 
-  <script src="features.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="features.js?v=12"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
