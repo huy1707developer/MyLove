@@ -15,42 +15,42 @@ const GATE_PASS = '1605';
 
 const LOVE_QUESTIONS = [
   {
-    question: '1. Ngay chinh thuc hen ho cua hai dua minh la ngay nao?',
-    options: ['Ngay 14/02', 'Ngay 16/05', 'Ngay 20/10', 'Ngay 08/03'],
+    question: '1. Ngày chính thức hẹn hò của hai đứa mình là ngày nào?',
+    options: ['Ngày 14/02', 'Ngày 16/05', 'Ngày 20/10', 'Ngày 08/03'],
     correctIndex: 1
   },
   {
-    question: '2. Ten goi nho day yeu thuong cua Be Gau la gi?',
-    options: ['Thuong Uyen', 'Thao Uyen', 'Phuong Uyen', 'Minh Uyen'],
+    question: '2. Tên gợi nhớ đầy yêu thương của Bé Gấu là gì?',
+    options: ['Thương Uyên', 'Thảo Uyên', 'Phương Uyên', 'Minh Uyên'],
     correctIndex: 0
   },
   {
-    question: '3. Loi hua thienh lieng nhat cua hai dua minh la gi?',
+    question: '3. Lời hứa thiêng liêng nhất của hai đứa mình là gì?',
     options: [
-      'Moi tuan di an ngon mot lan',
-      'Khong bao gio bo roi doi phuong, cung nhau dong hanh den tron doi',
-      'Di du lich khap moi mien dat nuoc',
-      'Luon nhan tin chuc ngu ngon moi toi'
+      'Mỗi tuần đi ăn ngon một lần',
+      'Không bao giờ bỏ rơi đối phương, cùng nhau đồng hành đến trọn đời',
+      'Đi du lịch khắp mọi miền đất nước',
+      'Luôn nhắn tin chúc ngủ ngon mỗi tối'
     ],
     correctIndex: 1
   },
   {
-    question: '4. Dieu gi ma Be Gau luon tam dac va de y nhat?',
+    question: '4. Điều gì mà Bé Gấu luôn tâm đắc và để ý nhất?',
     options: [
-      'Ngu nuong vao cuoi tuan',
-      'Su xinh dep va khong duoc mup',
-      'Uong tra sua full topping',
-      'Xem phim xuyen dem'
+      'Ngủ nướng vào cuối tuần',
+      'Sự xinh đẹp và không được mụp',
+      'Uống trà sữa full topping',
+      'Xem phim xuyên đêm'
     ],
     correctIndex: 1
   },
   {
-    question: '5. Dau la nhung dieu Be Gau thich nhat?',
+    question: '5. Đâu là những điều Bé Gấu thích nhất?',
     options: [
-      'O nha doc sach va nau an',
-      'Di du lich, di choi, song thoai ma tu do, song hanh phuc binh yen',
-      'Mua sam do cong nghe',
-      'Choi the thao mao hiem'
+      'Ở nhà đọc sách và nấu ăn',
+      'Đi du lịch, đi chơi, sống thoải mái tự do, sống hạnh phúc bình yên',
+      'Mua sắm đồ công nghệ',
+      'Chơi thể thao mạo hiểm'
     ],
     correctIndex: 1
   }
@@ -125,7 +125,7 @@ function verifyGate() {
   const pass = $('gatePassword').value.trim();
 
   if (pass !== GATE_PASS) {
-    err.textContent = 'Sai mat ma bi mat roi nha, thu lai nao!';
+    err.textContent = 'Sai mật mã bí mật rồi nha, thử lại nào!';
     err.className = 'gate-error';
     return;
   }
@@ -137,13 +137,13 @@ function verifyGate() {
   }
 
   if (gateOptionIndex !== gateQuestion.correctIndex) {
-    err.textContent = 'Chua dung roi! Nghi ky ve Be Gau xem nao';
+    err.textContent = 'Chưa đúng rồi! Nghĩ kỹ về Bé Gấu xem nào';
     err.className = 'gate-error';
     return;
   }
 
   localStorage.setItem('love_user_role', gateRole);
-  err.textContent = 'Chao mung ' + gateRole + ' quay tro lai!';
+  err.textContent = 'Chào mừng ' + gateRole + ' quay trở lại!';
   err.className = 'gate-error ok';
 
   setTimeout(() => {
@@ -227,7 +227,7 @@ function renderCountdown() {
     if (isNaN(d)) return;
     const left = d - new Date();
     items.push({
-      label: m.label || m.title || 'Ky niem',
+      label: m.label || m.title || 'Kỷ niệm',
       date: d,
       left: left,
       emoji: m.emoji || '💗'
@@ -238,7 +238,7 @@ function renderCountdown() {
   const base = new Date(LOVE_START + 'T00:00:00');
   const thisYear = new Date(nowYear(base), base.getMonth(), base.getDate());
   const nextAnniv = thisYear > new Date() ? thisYear : new Date(nowYear(base) + 1, base.getMonth(), base.getDate());
-  items.push({ label: 'Ky niem 1 nam yeu nhau', date: nextAnniv, left: nextAnniv - new Date(), emoji: '💍' });
+  items.push({ label: 'Kỷ niệm 1 năm yêu nhau', date: nextAnniv, left: nextAnniv - new Date(), emoji: '💍' });
 
   // Loc ra nhung moc con tuong lai
   const upcoming = items.filter(i => i.left > 0).sort((a, b) => a.left - b.left).slice(0, 3);
@@ -254,7 +254,7 @@ function renderCountdown() {
     const mnt = Math.floor((i.left % 3600000) / 60000);
     return '<div class="cd-item">' +
       '<span class="cd-emoji">' + i.emoji + '</span>' +
-      '<span class="cd-text">Con <b>' + d + ' ngay ' + h + ' gio ' + mnt + ' phut</b> den ' + escapeHtml(i.label) + '</span>' +
+      '<span class="cd-text">Còn <b>' + d + ' ngày ' + h + ' giờ ' + mnt + ' phút</b> đến ' + escapeHtml(i.label) + '</span>' +
       '</div>';
   }).join('');
 }
@@ -292,7 +292,7 @@ async function loadSharedData() {
       if (a) a.src = window.SHARED.music;
     }
   } catch (err) {
-    console.warn('Khong doc duoc du lieu chung:', err.message);
+    console.warn('Không đọc được dữ liệu chung:', err.message);
   }
 }
 
@@ -317,7 +317,7 @@ async function saveSharedData() {
     return true;
   } catch (err) {
     console.error('Loi luu du lieu chung:', err);
-    toast('Khong luu duoc du lieu chung: ' + err.message, 'error');
+    toast('Không lưu được dữ liệu chung: ' + err.message, 'error');
     return false;
   }
 }
@@ -334,7 +334,7 @@ function renderCapsules() {
   grid.innerHTML = '';
 
   if (!list.length) {
-    grid.innerHTML = '<p class="capsule-empty">Chua co phong bi nao. Hay tao mot loi nhan bi mat cho nhom nha!</p>';
+    grid.innerHTML = '<p class="capsule-empty">Chưa có phong bì nào. Hãy tạo một lời nhắn bí mật cho nhóm nhé!</p>';
     return;
   }
 
@@ -349,8 +349,8 @@ function renderCapsules() {
     card.innerHTML =
       '<div class="capsule-emoji">' + emoji + '</div>' +
       '<div class="capsule-title">' + escapeHtml(c.title || 'Phong bi') + '</div>' +
-      '<div class="capsule-date">' + (isOpen ? 'Da mo' : 'Mo khi ' + formatDate(c.openDate)) + '</div>' +
-      '<div class="capsule-body">' + (isOpen ? escapeHtml(c.message || '') : 'Phong bi nay chua den ngay mo.') + '</div>' +
+      '<div class="capsule-date">' + (isOpen ? 'Đã mở' : 'Mở khi ' + formatDate(c.openDate)) + '</div>' +
+      '<div class="capsule-body">' + (isOpen ? escapeHtml(c.message || '') : 'Phong bì này chưa đến ngày mở.') + '</div>' +
       (isOpen ? '' : '<div class="capsule-count" data-cap="' + i + '"></div>');
 
     if (!isOpen) {
@@ -362,7 +362,7 @@ function renderCapsules() {
         const d = Math.floor(left / 86400000);
         const h = Math.floor((left % 86400000) / 3600000);
         const m = Math.floor((left % 3600000) / 60000);
-        cd.textContent = 'Con ' + d + ' ngay ' + h + ' gio ' + m + ' phut';
+        cd.textContent = 'Còn ' + d + ' ngày ' + h + ' giờ ' + m + ' phút';
       };
       upd();
       setInterval(upd, 60000);
@@ -374,16 +374,16 @@ function renderCapsules() {
 
 /** Them phong bi moi */
 function addCapsule() {
-  const title = prompt('Tieu de phong bi (VD: "Mo khi hai dua gian nhau"):');
+  const title = prompt('Tiêu đề phong bì (VD: "Mở khi hai đứa giận nhau"):');
   if (!title) return;
 
-  const dateStr = prompt('Mo khi ngay nao? (YYYY-MM-DD)', '2027-05-16');
+  const dateStr = prompt('Mở khi ngày nào? (YYYY-MM-DD)', '2027-05-16');
   if (!dateStr) return;
 
-  const message = prompt('Loi nhan ben trong (co the de trong):', '');
+  const message = prompt('Lời nhắn bên trong (có thể để trống):', '');
   if (message === null) return;
 
-  const emoji = prompt('Bieu tuong (VD: 💌 🔒 🎁):', '💌') || '💌';
+  const emoji = prompt('Biểu tượng (VD: 💌 🔒 🎁):', '💌') || '💌';
 
   window.SHARED.capsules.push({
     id: 'cap_' + Date.now(),
@@ -395,7 +395,7 @@ function addCapsule() {
   });
 
   saveSharedData().then(ok => {
-    if (ok) { renderCapsules(); toast('Da them phong bi 💌', 'success'); }
+    if (ok) { renderCapsules(); toast('Đã thêm phong bì 💌', 'success'); }
   });
 }
 
@@ -462,7 +462,7 @@ function renderPlaces() {
   if (el) el.textContent = entries.length ? entries.length + ' noi' : '';
 
   if (!entries.length) {
-    grid.innerHTML = '<p class="places-empty">Chua co dia diem nao. Khi upload anh them "Dia diem" nha!</p>';
+    grid.innerHTML = '<p class="places-empty">Chưa có địa điểm nào. Khi upload anh thêm "Địa điểm" nhé!</p>';
     return;
   }
 
@@ -486,12 +486,12 @@ function bindMusic() {
 
   disc.addEventListener('click', () => {
     if (!audio.src) {
-      toast('Chua co bai hat nao. Hay them link YouTube o album nhe!', 'error');
+      toast('Chưa có bài hát nào. Hãy thêm link YouTube ở album nhé!', 'error');
       return;
     }
     if (audio.paused) {
       audio.play().then(() => disc.classList.add('playing'))
-                   .catch(() => toast('Khong phat duoc nhac', 'error'));
+                   .catch(() => toast('Không phát được nhạc', 'error'));
     } else {
       audio.pause();
       disc.classList.remove('playing');
@@ -520,7 +520,7 @@ function playAlbumMusic(url) {
     if (audio) {
       audio.src = url;
       audio.play().then(() => { if (disc) disc.classList.add('playing'); })
-                  .catch(() => toast('Khong phat duoc link nay', 'error'));
+                  .catch(() => toast('Không phát được link này', 'error'));
     }
     return;
   }
@@ -528,7 +528,7 @@ function playAlbumMusic(url) {
   if (audio) {
     audio.src = stream;
     audio.play().then(() => { if (disc) disc.classList.add('playing'); })
-                .catch(() => toast('Khong phat duoc nhac', 'error'));
+                .catch(() => toast('Không phát được nhạc', 'error'));
   }
 }
 
@@ -567,8 +567,7 @@ function renderRoleBadges() {
     el.textContent = role;
   });
   document.querySelectorAll('.role-switch-icon').forEach(el => {
-    el.textContent = role === 'Anh' ? '\u{1F466}' : '\u{1F43B}';
-  });
+    el.textContent = role === 'Anh' ? '\u{1F466}' : '\u{1F43B}';  });
 }
 
 function renderAuthorPicker() {
