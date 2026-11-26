@@ -52,6 +52,7 @@ let currentAlbum = 'all';
 let searchTerm = '';
 let currentIndex = -1;    // index trong filtered của lightbox
 let pendingFiles = [];    // file đang chờ upload
+let confirmResolver = null; // resolver của hộp thoại xác nhận (dùng chung)
 
 // Khi đang thêm ảnh vào 1 album cụ thể (không null = gom vào album đó)
 let uploadTargetGroupId = null;
@@ -1705,27 +1706,39 @@ function confirmDialog(title, message, okText) {
         </div>`;
       document.body.appendChild(overlay);
 
+      // ⚠️ Resolver dùng chung cho MỌI lần gọi.
+      // Nếu để closure trong listener thì lần gọi thứ 2 sẽ resolve nhầm
+      // promise cũ → promise mới treo vĩnh viễn → thao tác xóa không chạy.
       overlay.addEventListener('click', (e) => {
         const act = e.target.getAttribute && e.target.getAttribute('data-act');
-        if (act === 'ok') { close(true); }
-        else if (act === 'cancel' || e.target === overlay) { close(false); }
+        if (act === 'ok') { closeConfirm(true); }
+        else if (act === 'cancel' || e.target === overlay) { closeConfirm(false); }
       });
 
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !overlay.hidden) { close(false); }
+        if (e.key === 'Escape' && !overlay.hidden) { closeConfirm(false); }
       });
     }
 
-    function close(result) {
-      overlay.hidden = true;
-      resolve(result);
-    }
+    // Gán resolver hiện tại
+    confirmResolver = resolve;
 
     overlay.querySelector('.confirm-title').textContent = title;
     overlay.querySelector('.confirm-msg').textContent = message;
     overlay.querySelector('[data-act="ok"]').textContent = okText || 'Xác nhận';
     overlay.hidden = false;
   });
+}
+
+/**
+ * Đóng hộp thoại xác nhận và trả kết quả về promise đang chờ.
+ */
+function closeConfirm(result) {
+  const overlay = $('confirmOverlay');
+  if (overlay) overlay.hidden = true;
+  const r = confirmResolver;
+  confirmResolver = null;
+  if (r) r(result);
 }
 
 /* ==========================================================
